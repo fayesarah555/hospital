@@ -51,7 +51,8 @@ const authController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
-        console.log('Tentative de connexion:', email, password);
+      
+      console.log('🔍 Tentative de connexion:', { email, password: '***' });
 
       if (!email || !password) {
         return res.status(400).json({ error: 'Email et mot de passe requis' });
@@ -63,14 +64,19 @@ const authController = {
         [email]
       );
 
+      console.log('👤 Utilisateur trouvé:', users.length > 0 ? 'OUI' : 'NON');
+
       if (users.length === 0) {
-        return res.status(401).json({ error: 'Email ou mot de passe incorrect okayy' });
+        return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
       }
 
       const user = users[0];
+      console.log('🔐 Vérification mot de passe...');
 
       // Vérifier le mot de passe
       const validPassword = await bcrypt.compare(password, user.password);
+      console.log('✅ Mot de passe valide:', validPassword ? 'OUI' : 'NON');
+      
       if (!validPassword) {
         return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
       }

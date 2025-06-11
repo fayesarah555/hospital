@@ -26,9 +26,25 @@ const traitementsController = {
         ORDER BY t.date_modification DESC
       `, [patientId]);
 
+      // Assurer que les médicaments sont bien parsés
+      const traitementsWithParsedMedicaments = traitements.map(traitement => {
+        let medicaments = [];
+        if (traitement.medicaments) {
+          if (typeof traitement.medicaments === 'string') {
+            medicaments = JSON.parse(traitement.medicaments);
+          } else if (Array.isArray(traitement.medicaments)) {
+            medicaments = traitement.medicaments;
+          }
+        }
+        return {
+          ...traitement,
+          medicaments
+        };
+      });
+
       res.json({
         patient: patients[0],
-        traitements
+        traitements: traitementsWithParsedMedicaments
       });
 
     } catch (error) {
@@ -55,7 +71,22 @@ const traitementsController = {
         return res.status(404).json({ error: 'Aucun traitement trouvé pour ce patient' });
       }
 
-      res.json(traitements[0]);
+      const traitement = traitements[0];
+      
+      // Assurer que les médicaments sont bien parsés
+      let medicaments = [];
+      if (traitement.medicaments) {
+        if (typeof traitement.medicaments === 'string') {
+          medicaments = JSON.parse(traitement.medicaments);
+        } else if (Array.isArray(traitement.medicaments)) {
+          medicaments = traitement.medicaments;
+        }
+      }
+
+      res.json({
+        ...traitement,
+        medicaments
+      });
 
     } catch (error) {
       console.error('Erreur traitement actuel:', error);
@@ -138,9 +169,22 @@ const traitementsController = {
         [patientId]
       );
 
+      console.log('🔍 Récupération du traitement pour le patient:', patientId, traitements);
+
       let medicaments = [];
       if (traitements.length > 0) {
-        medicaments = JSON.parse(traitements[0].medicaments || '[]');
+        const medicamentsData = traitements[0].medicaments;
+        
+        // Vérifier si c'est déjà un objet (parsé par MySQL2) ou une string JSON
+        if (typeof medicamentsData === 'string') {
+          medicaments = JSON.parse(medicamentsData || '[]');
+        } else if (Array.isArray(medicamentsData)) {
+          medicaments = medicamentsData;
+        } else {
+          medicaments = [];
+        }
+        
+        console.log('💊 Médicaments actuels:', medicaments);
       }
 
       // Vérifier si le médicament existe déjà
@@ -195,7 +239,15 @@ const traitementsController = {
         return res.status(404).json({ error: 'Aucun traitement trouvé' });
       }
 
-      let medicaments = JSON.parse(traitements[0].medicaments || '[]');
+      const medicamentsData = traitements[0].medicaments;
+      let medicaments = [];
+      
+      // Vérifier si c'est déjà un objet (parsé par MySQL2) ou une string JSON
+      if (typeof medicamentsData === 'string') {
+        medicaments = JSON.parse(medicamentsData || '[]');
+      } else if (Array.isArray(medicamentsData)) {
+        medicaments = medicamentsData;
+      }
       
       // Supprimer le médicament
       const initialLength = medicaments.length;
