@@ -7,7 +7,10 @@ const rendezvousController = {
     try {
       const { medecinId } = req.params;
       const { date, statut } = req.query;
+// log de debug
+      console.log(`Récupération agenda pour le médecin ID: ${medecinId}, Date: ${date}, Statut: ${statut}`);
 
+      
       // Vérifier que le médecin ne peut voir que son agenda
       if (req.user.role === 'medecin' && req.user.id != medecinId) {
         return res.status(403).json({ error: 'Accès refusé' });
