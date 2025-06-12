@@ -1,7 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import DoctorHomeScreen from './DoctorHomeScreen';
-import AppointmentScreen from './AppointmentScreen';
+import RHHomeScreen from './RHHomeScreen';
 import PatientsListScreen from './PatientsListScreen';
 
 const Stack = createStackNavigator();

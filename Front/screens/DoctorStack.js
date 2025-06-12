@@ -1,3 +1,4 @@
+// DoctorStack.js
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import DoctorHomeScreen from './DoctorHomeScreen';
@@ -12,7 +13,10 @@ export default function DoctorStack() {
 			<Stack.Screen
 				name="DoctorHomeScreen"
 				component={DoctorHomeScreen}
-				options={{ title: 'Accueil Docteur' }}
+				options={{
+					title: 'Accueil Docteur',
+					headerTitle: 'Accueil Docteur',
+				}}
 			/>
 			<Stack.Screen
 				name="AppointmentScreen"

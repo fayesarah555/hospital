@@ -60,8 +60,8 @@ export default function AddPatientScreen({ navigation }) {
 				value={treatment}
 				onChangeText={setTreatment}
 			/>
-			<TouchableOpacity style={styles.button}>
-				<Text style={styles.buttonText}>Ajouter Patient</Text>
+			<TouchableOpacity style={[styles.button, { backgroundColor: '#17a2b8' }]}>
+				<Text style={styles.buttonText}>➕ Ajouter un patient</Text>
 			</TouchableOpacity>
 			<TouchableOpacity
 				style={styles.button}
@@ -100,16 +100,17 @@ const styles = StyleSheet.create({
 		shadowRadius: 0.5,
 	},
 	button: {
-		marginTop: 20,
-		width: '50%',
-		backgroundColor: 'blue',
-		borderRadius: 5,
+		backgroundColor: '#3498db',
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderRadius: 8,
+		marginBottom: 15,
+		width: '80%',
+		alignItems: 'center',
 	},
 	buttonText: {
-		color: '#ffffff',
-		textAlign: 'center',
-		padding: 15,
-		fontSize: 18,
+		color: 'white',
 		fontWeight: 'bold',
+		fontSize: 16,
 	},
 });

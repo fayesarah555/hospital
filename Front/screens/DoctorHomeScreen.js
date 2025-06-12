@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import {
 	View,
 	Text,
-	Button,
-	StyleSheet,
-	FlatList,
 	TouchableOpacity,
 	Alert,
 	Modal,
 	TextInput,
+	FlatList,
+	StyleSheet,
 } from 'react-native';
-import AppointmentScreen from './AppointmentScreen';
+import { Ionicons } from '@expo/vector-icons'; // Assure-toi que ce package est installé
 
 export default function DoctorHomeScreen({ navigation }) {
 	const [patients, setPatients] = useState([
@@ -52,11 +51,17 @@ export default function DoctorHomeScreen({ navigation }) {
 	]);
 
 	const [modalVisible, setModalVisible] = useState(false);
+	const [addModalVisible, setAddModalVisible] = useState(false);
 	const [currentPatient, setCurrentPatient] = useState(null);
 	const [editName, setEditName] = useState('');
 	const [editAge, setEditAge] = useState('');
 	const [editMedicine, setEditMedicine] = useState('');
 	const [editLastVisit, setEditLastVisit] = useState('');
+
+	const [newName, setNewName] = useState('');
+	const [newAge, setNewAge] = useState('');
+	const [newMedicine, setNewMedicine] = useState('');
+	const [newLastVisit, setNewLastVisit] = useState('');
 
 	const handlePress = patient => {
 		setCurrentPatient(patient);
@@ -103,6 +108,26 @@ export default function DoctorHomeScreen({ navigation }) {
 		}
 	};
 
+	const addPatient = () => {
+		if (newName && newAge && newMedicine && newLastVisit) {
+			const newPatient = {
+				id: Date.now().toString(),
+				name: newName,
+				age: parseInt(newAge),
+				medicine: newMedicine,
+				lastVisit: newLastVisit,
+			};
+			setPatients([...patients, newPatient]);
+			setAddModalVisible(false);
+			setNewName('');
+			setNewAge('');
+			setNewMedicine('');
+			setNewLastVisit('');
+		} else {
+			Alert.alert('Champs manquants', 'Veuillez remplir tous les champs.');
+		}
+	};
+
 	const renderItem = ({ item }) => (
 		<TouchableOpacity
 			style={styles.patientItem}
@@ -137,6 +162,13 @@ export default function DoctorHomeScreen({ navigation }) {
 				<Text style={styles.ButtonNavText}>Prise de RDV</Text>
 			</TouchableOpacity>
 
+			<TouchableOpacity
+				style={[styles.ButtonNav, { backgroundColor: '#17a2b8' }]}
+				onPress={() => setAddModalVisible(true)}
+			>
+				<Text style={styles.ButtonNavText}>➕ Ajouter un patient</Text>
+			</TouchableOpacity>
+
 			<FlatList
 				data={patients}
 				renderItem={renderItem}
@@ -160,7 +192,6 @@ export default function DoctorHomeScreen({ navigation }) {
 							onChangeText={setEditName}
 							placeholder="Nom du patient"
 						/>
-
 						<TextInput
 							style={styles.input}
 							value={editAge}
@@ -168,14 +199,12 @@ export default function DoctorHomeScreen({ navigation }) {
 							placeholder="Âge"
 							keyboardType="numeric"
 						/>
-
 						<TextInput
 							style={styles.input}
 							value={editMedicine}
 							onChangeText={setEditMedicine}
 							placeholder="Médicaments"
 						/>
-
 						<TextInput
 							style={styles.input}
 							value={editLastVisit}
@@ -190,7 +219,6 @@ export default function DoctorHomeScreen({ navigation }) {
 							>
 								<Text style={styles.buttonText}>Annuler</Text>
 							</TouchableOpacity>
-
 							<TouchableOpacity
 								style={[styles.button, styles.buttonSave]}
 								onPress={saveChanges}
@@ -198,6 +226,64 @@ export default function DoctorHomeScreen({ navigation }) {
 								<Text style={styles.buttonText}>Enregistrer</Text>
 							</TouchableOpacity>
 						</View>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Modal d'ajout */}
+			<Modal
+				animationType="slide"
+				transparent={true}
+				visible={addModalVisible}
+				onRequestClose={() => setAddModalVisible(false)}
+			>
+				<View style={styles.centeredView}>
+					<View style={styles.modalView}>
+						<View
+							style={{
+								flexDirection: 'row',
+								justifyContent: 'space-between',
+								width: '100%',
+							}}
+						>
+							<Text style={styles.modalTitle}>Nouveau patient</Text>
+							<TouchableOpacity onPress={() => setAddModalVisible(false)}>
+								<Ionicons name="close" size={24} color="black" />
+							</TouchableOpacity>
+						</View>
+
+						<TextInput
+							style={styles.input}
+							value={newName}
+							onChangeText={setNewName}
+							placeholder="Nom du patient"
+						/>
+						<TextInput
+							style={styles.input}
+							value={newAge}
+							onChangeText={setNewAge}
+							placeholder="Âge"
+							keyboardType="numeric"
+						/>
+						<TextInput
+							style={styles.input}
+							value={newMedicine}
+							onChangeText={setNewMedicine}
+							placeholder="Médicaments"
+						/>
+						<TextInput
+							style={styles.input}
+							value={newLastVisit}
+							onChangeText={setNewLastVisit}
+							placeholder="Dernière visite (JJ/MM/AAAA)"
+						/>
+
+						<TouchableOpacity
+							style={[styles.button, styles.buttonSave, { width: '100%', marginTop: 10 }]}
+							onPress={addPatient}
+						>
+							<Text style={styles.buttonText}>Ajouter</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 			</Modal>
@@ -274,10 +360,7 @@ const styles = StyleSheet.create({
 		padding: 20,
 		alignItems: 'center',
 		shadowColor: '#000',
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.25,
 		shadowRadius: 4,
 		elevation: 5,
