@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 
 // Configuration du transporteur email
 const createEmailTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({  // ← TRANSPORT pas TRANSPORTER !
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
     secure: false, // true pour 465, false pour les autres ports
@@ -95,6 +95,14 @@ const sendEmail = async (to, subject, text, html = null) => {
 // Fonction pour tester la configuration email
 const testEmailConfig = async () => {
   try {
+    console.log('📧 Variables email:');
+    console.log('- EMAIL_HOST:', process.env.EMAIL_HOST);
+    console.log('- EMAIL_PORT:', process.env.EMAIL_PORT);
+    console.log('- EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('- EMAIL_PASS:', process.env.EMAIL_PASS ? 'Configuré' : 'NON CONFIGURÉ');
+    console.log('- EMAIL_FROM_NAME:', process.env.EMAIL_FROM_NAME);
+    console.log('- EMAIL_FROM:', process.env.EMAIL_FROM);
+    
     const transporter = createEmailTransporter();
     await transporter.verify();
     console.log('✅ Configuration email valide');
@@ -108,6 +116,9 @@ const testEmailConfig = async () => {
 // Fonction pour envoyer un email de test
 const sendTestEmail = async () => {
   try {
+    console.log('🧪 Début du test email...');
+    console.log('📧 Destination:', process.env.EMAIL_USER);
+    
     const success = await sendEmail(
       process.env.EMAIL_USER, // S'envoyer un email de test
       'Test - Système Hospitalier',
