@@ -9,6 +9,7 @@ import {
 	Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as MailComposer from 'expo-mail-composer';
 
 export default function AppointmentScreen({ navigation }) {
 	const [patientName, setPatientName] = useState('');
@@ -18,6 +19,30 @@ export default function AppointmentScreen({ navigation }) {
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [showTimePicker, setShowTimePicker] = useState(false);
 	const [reason, setReason] = useState('');
+
+	const notifyByEmail = async () => {
+		const isAvailable = await MailComposer.isAvailableAsync();
+		if (!isAvailable) {
+			Alert.alert('Erreur', "L'envoi d'email n'est pas supporté sur cet appareil.");
+			return;
+		}
+
+		const emailBody = `Bonjour ${patientName},
+
+Votre rendez-vous avec le Dr ${doctorName} est confirmé.
+
+🗓 Date : ${date.toLocaleDateString()}
+🕒 Heure : ${time.toLocaleTimeString().slice(0, 5)}
+📄 Motif : ${reason}
+
+À bientôt !`;
+
+		await MailComposer.composeAsync({
+			recipients: ['yannis.bttr@gmail.com'],
+			subject: 'Confirmation de rendez-vous',
+			body: emailBody,
+		});
+	};
 
 	const onDateChange = (event, selectedDate) => {
 		const currentDate = selectedDate || date;
@@ -31,11 +56,13 @@ export default function AppointmentScreen({ navigation }) {
 		setTime(currentTime);
 	};
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		if (!patientName || !doctorName || !reason) {
 			Alert.alert('Erreur', 'Veuillez remplir tous les champs');
 			return;
 		}
+
+		await notifyByEmail();
 
 		Alert.alert(
 			'Rendez-vous confirmé',
