@@ -19,55 +19,65 @@ export default function AddPatientScreen({ navigation }) {
 
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
-			<Text style={styles.title}>Ajouter un Nouveau Patient</Text>
-			<TextInput style={styles.input} placeholder="ID" value={id} onChangeText={setId} />
-			<TextInput
-				style={styles.input}
-				placeholder="Nom"
-				value={lastName}
-				onChangeText={setLastName}
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Prénom"
-				value={firstName}
-				onChangeText={setFirstName}
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Âge"
-				value={age}
-				onChangeText={setAge}
-				keyboardType="numeric"
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Poids (kg)"
-				value={weight}
-				onChangeText={setWeight}
-				keyboardType="numeric"
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Taille (cm)"
-				value={height}
-				onChangeText={setHeight}
-				keyboardType="numeric"
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Traitement en cours"
-				value={treatment}
-				onChangeText={setTreatment}
-			/>
-			<TouchableOpacity style={[styles.button, { backgroundColor: '#17a2b8' }]}>
+			<Text style={styles.title}>➕ Ajouter un Patient</Text>
+
+			<View style={styles.formCard}>
+				<TextInput
+					style={styles.input}
+					placeholder="ID"
+					value={id}
+					onChangeText={setId}
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Nom"
+					value={lastName}
+					onChangeText={setLastName}
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Prénom"
+					value={firstName}
+					onChangeText={setFirstName}
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Âge"
+					value={age}
+					onChangeText={setAge}
+					keyboardType="numeric"
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Poids (kg)"
+					value={weight}
+					onChangeText={setWeight}
+					keyboardType="numeric"
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Taille (cm)"
+					value={height}
+					onChangeText={setHeight}
+					keyboardType="numeric"
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Traitement en cours"
+					value={treatment}
+					onChangeText={setTreatment}
+				/>
+			</View>
+
+			<TouchableOpacity style={styles.primaryButton}>
 				<Text style={styles.buttonText}>➕ Ajouter un patient</Text>
 			</TouchableOpacity>
+
 			<TouchableOpacity
-				style={styles.button}
+				style={styles.secondaryButton}
 				onPress={() => navigation.navigate('PatientsList')}
 			>
-				<Text style={styles.buttonText}>Liste Patients</Text>
+				<Text style={styles.buttonText}>📋 Liste des patients</Text>
 			</TouchableOpacity>
 		</ScrollView>
 	);
@@ -78,39 +88,59 @@ const styles = StyleSheet.create({
 		flexGrow: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
-		backgroundColor: '#ffffff',
+		backgroundColor: '#e6f2ff',
 		padding: 20,
 	},
 	title: {
-		fontSize: 28,
-		fontWeight: 'bold',
+		fontSize: 26,
+		fontWeight: '700',
+		color: '#2c3e50',
 		marginBottom: 20,
 	},
-	input: {
-		width: '90%',
-		padding: 10,
-		marginVertical: 10,
-		borderWidth: 1,
-		borderColor: '#9197AE',
-		borderRadius: 5,
+	formCard: {
+		width: '100%',
 		backgroundColor: '#ffffff',
+		borderRadius: 20,
+		padding: 20,
+		marginBottom: 20,
+		elevation: 4,
 		shadowColor: '#000',
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 0.5,
+		shadowOpacity: 0.2,
+		shadowRadius: 4,
 	},
-	button: {
-		backgroundColor: '#3498db',
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 8,
+	input: {
+		backgroundColor: '#f8f9fa',
+		borderRadius: 12,
+		padding: 12,
+		marginVertical: 8,
+		borderWidth: 1,
+		borderColor: '#ced4da',
+		fontSize: 16,
+		color: '#2c3e50',
+	},
+	primaryButton: {
+		backgroundColor: '#17a2b8',
+		paddingVertical: 14,
+		paddingHorizontal: 30,
+		borderRadius: 14,
 		marginBottom: 15,
-		width: '80%',
+		width: '90%',
 		alignItems: 'center',
+		elevation: 3,
+	},
+	secondaryButton: {
+		backgroundColor: '#3498db',
+		paddingVertical: 14,
+		paddingHorizontal: 30,
+		borderRadius: 14,
+		width: '90%',
+		alignItems: 'center',
+		elevation: 3,
 	},
 	buttonText: {
 		color: 'white',
-		fontWeight: 'bold',
+		fontWeight: '600',
 		fontSize: 16,
 	},
 });

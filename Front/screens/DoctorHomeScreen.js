@@ -9,7 +9,8 @@ import {
 	FlatList,
 	StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Assure-toi que ce package est installé
+import { Ionicons } from '@expo/vector-icons';
+import * as MailComposer from 'expo-mail-composer';
 
 export default function DoctorHomeScreen({ navigation }) {
 	const [patients, setPatients] = useState([
@@ -89,8 +90,38 @@ export default function DoctorHomeScreen({ navigation }) {
 		);
 	};
 
-	const saveChanges = () => {
+	const sendMedicineChangeEmail = async (patient, newMedicine) => {
+		const isAvailable = await MailComposer.isAvailableAsync();
+		if (!isAvailable) {
+			Alert.alert('Erreur', "L'envoi d'email n'est pas supporté sur cet appareil.");
+			return;
+		}
+
+		const body = `Bonjour ${patient.name},
+
+⚠️ Les informations concernant vos médicaments ont été modifiées.
+
+💊 Nouveau traitement : ${newMedicine}
+👨‍⚕️ Dernière mise à jour par le docteur : aujourd'hui
+📅 Dernière visite : ${patient.lastVisit}
+
+Merci de votre attention.`;
+
+		await MailComposer.composeAsync({
+			recipients: ['yannis.bttr@gmail.com'],
+			subject: `Mise à jour des médicaments de ${patient.name}`,
+			body,
+		});
+	};
+
+	const saveChanges = async () => {
 		if (currentPatient) {
+			const hasMedicineChanged = currentPatient.medicine !== editMedicine;
+
+			if (hasMedicineChanged) {
+				await sendMedicineChangeEmail(currentPatient, editMedicine);
+			}
+
 			setPatients(
 				patients.map(patient =>
 					patient.id === currentPatient.id
@@ -107,7 +138,6 @@ export default function DoctorHomeScreen({ navigation }) {
 			setModalVisible(false);
 		}
 	};
-
 	const addPatient = () => {
 		if (newName && newAge && newMedicine && newLastVisit) {
 			const newPatient = {
@@ -152,14 +182,14 @@ export default function DoctorHomeScreen({ navigation }) {
 				style={styles.ButtonNav}
 				onPress={() => navigation.navigate('PatientsList')}
 			>
-				<Text style={styles.ButtonNavText}>Voir tous les patients</Text>
+				<Text style={styles.ButtonNavText}>📋 Voir tous les patients</Text>
 			</TouchableOpacity>
 
 			<TouchableOpacity
 				style={styles.ButtonNav}
 				onPress={() => navigation.navigate('AppointmentScreen')}
 			>
-				<Text style={styles.ButtonNavText}>Prise de RDV</Text>
+				<Text style={styles.ButtonNavText}>📅 Prise de RDV</Text>
 			</TouchableOpacity>
 
 			<TouchableOpacity
@@ -217,13 +247,13 @@ export default function DoctorHomeScreen({ navigation }) {
 								style={[styles.button, styles.buttonCancel]}
 								onPress={() => setModalVisible(false)}
 							>
-								<Text style={styles.buttonText}>Annuler</Text>
+								<Text style={styles.buttonText}>❌ Annuler</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
 								style={[styles.button, styles.buttonSave]}
 								onPress={saveChanges}
 							>
-								<Text style={styles.buttonText}>Enregistrer</Text>
+								<Text style={styles.buttonText}>💾 Enregistrer</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -282,7 +312,7 @@ export default function DoctorHomeScreen({ navigation }) {
 							style={[styles.button, styles.buttonSave, { width: '100%', marginTop: 10 }]}
 							onPress={addPatient}
 						>
-							<Text style={styles.buttonText}>Ajouter</Text>
+							<Text style={styles.buttonText}>➕ Ajouter</Text>
 						</TouchableOpacity>
 					</View>
 				</View>

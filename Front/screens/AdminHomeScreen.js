@@ -65,20 +65,27 @@ export default function AdminHomeScreen() {
 		setUsers(updatedUsers);
 		handleFilter(selectedRole);
 		setNewUser({ username: '', role: 'RH', details: '' });
-		setAddUserVisible(false); // Ferme le formulaire après ajout
+		setAddUserVisible(false);
 	};
 
-	const renderItem = ({ item }) => (
-		<TouchableOpacity style={styles.userItem} onPress={() => handleSelectUser(item)}>
-			<Text style={styles.username}>{item.username}</Text>
-			<Text style={styles.role}>({item.role})</Text>
-			<Text style={styles.details}>{item.details}</Text>
-		</TouchableOpacity>
-	);
+	const renderItem = ({ item }) => {
+		const roleColor = item.role === 'Doctor' ? '#10b981' : '#3b82f6';
+
+		return (
+			<TouchableOpacity
+				style={[styles.userItem, { borderLeftColor: roleColor }]}
+				onPress={() => handleSelectUser(item)}
+			>
+				<Text style={styles.username}>{item.username}</Text>
+				<Text style={styles.role}>{item.role === 'Doctor' ? '🩺 Médecin' : '🧑‍💼 RH'}</Text>
+				<Text style={styles.details}>{item.details}</Text>
+			</TouchableOpacity>
+		);
+	};
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>👤 Gestion des utilisateurs</Text>
+			<Text style={styles.title}>Gestion des utilisateurs</Text>
 
 			<View style={styles.filters}>
 				{['All', 'RH', 'Doctor'].map(role => (
@@ -148,7 +155,6 @@ export default function AdminHomeScreen() {
 				</View>
 			)}
 
-			{/* Modal Modification utilisateur */}
 			<Modal
 				visible={modalVisible}
 				transparent
@@ -203,85 +209,102 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		padding: 20,
-		backgroundColor: '#f2f2f2',
+		backgroundColor: '#f1f5f9',
 	},
 	title: {
-		fontSize: 26,
+		fontSize: 30,
 		fontWeight: 'bold',
 		textAlign: 'center',
-		marginBottom: 20,
-		color: '#222',
+		marginBottom: 30,
+		color: '#1e293b',
 	},
 	filters: {
 		flexDirection: 'row',
 		justifyContent: 'space-around',
-		marginBottom: 20,
+		marginBottom: 25,
 	},
 	filterButton: {
 		paddingVertical: 10,
-		paddingHorizontal: 15,
-		borderRadius: 20,
-		backgroundColor: '#e0e0e0',
+		paddingHorizontal: 18,
+		borderRadius: 50,
+		backgroundColor: '#e2e8f0',
 	},
 	filterButtonActive: {
-		backgroundColor: '#007bff',
+		backgroundColor: '#3b82f6',
 	},
 	filterButtonText: {
-		fontSize: 14,
-		color: '#333',
+		fontSize: 15,
+		fontWeight: '600',
+		color: '#1e293b',
 	},
 	list: {
 		marginBottom: 20,
 	},
 	userItem: {
 		backgroundColor: '#fff',
-		padding: 15,
-		borderRadius: 10,
-		marginBottom: 10,
-		borderLeftWidth: 4,
-		borderLeftColor: '#007bff',
+		padding: 18,
+		borderRadius: 16,
+		marginBottom: 12,
+		flexDirection: 'column',
+		gap: 4,
+		borderLeftWidth: 6,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 3,
 	},
 	username: {
 		fontSize: 18,
 		fontWeight: 'bold',
-		color: '#333',
+		color: '#0f172a',
 	},
 	role: {
 		fontSize: 14,
-		color: '#888',
+		fontWeight: '600',
+		color: '#6366f1',
 	},
 	details: {
-		fontSize: 15,
-		color: '#555',
-		marginTop: 5,
+		fontSize: 14,
+		color: '#475569',
 	},
 	inputContainer: {
 		marginTop: 10,
+		backgroundColor: '#fff',
+		padding: 16,
+		borderRadius: 16,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.08,
+		shadowRadius: 3,
+		elevation: 2,
 	},
 	input: {
-		backgroundColor: '#fff',
-		padding: 10,
-		marginBottom: 10,
-		borderRadius: 8,
+		backgroundColor: '#e2e8f0',
+		padding: 12,
+		marginBottom: 12,
+		borderRadius: 10,
 		fontSize: 16,
+		color: '#1e293b',
 	},
 	addButton: {
-		backgroundColor: '#28a745',
-		padding: 12,
-		borderRadius: 10,
+		backgroundColor: '#10b981',
+		padding: 14,
+		borderRadius: 12,
 		alignItems: 'center',
+		marginTop: 8,
 	},
 	addButtonText: {
 		color: '#fff',
 		fontSize: 16,
-		fontWeight: '600',
+		fontWeight: '700',
 	},
 	toggleAddButton: {
-		backgroundColor: '#17a2b8',
-		padding: 12,
-		borderRadius: 10,
+		backgroundColor: '#0ea5e9',
+		padding: 14,
+		borderRadius: 14,
 		alignItems: 'center',
-		marginBottom: 10,
+		marginBottom: 16,
 	},
 	centeredView: {
 		flex: 1,
@@ -290,17 +313,22 @@ const styles = StyleSheet.create({
 		backgroundColor: 'rgba(0, 0, 0, 0.4)',
 	},
 	modalView: {
-		width: '85%',
-		backgroundColor: '#fff',
-		padding: 20,
-		borderRadius: 12,
-		elevation: 5,
+		width: '90%',
+		backgroundColor: '#f8fafc',
+		padding: 24,
+		borderRadius: 18,
+		elevation: 10,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.2,
+		shadowRadius: 6,
 	},
 	modalTitle: {
-		fontSize: 20,
-		fontWeight: 'bold',
-		marginBottom: 15,
+		fontSize: 22,
+		fontWeight: '700',
+		marginBottom: 18,
 		textAlign: 'center',
+		color: '#0f172a',
 	},
 	modalButtons: {
 		flexDirection: 'row',
@@ -309,20 +337,21 @@ const styles = StyleSheet.create({
 	},
 	button: {
 		flex: 1,
-		paddingVertical: 10,
+		paddingVertical: 12,
 		marginHorizontal: 5,
-		borderRadius: 8,
+		borderRadius: 10,
 		alignItems: 'center',
 	},
 	buttonText: {
 		color: '#fff',
-		fontWeight: '600',
+		fontWeight: '700',
 		fontSize: 14,
 	},
 	picker: {
-		backgroundColor: '#fff',
+		backgroundColor: '#e2e8f0',
 		marginBottom: 10,
-		borderRadius: 8,
+		borderRadius: 10,
 		paddingHorizontal: 10,
+		color: '#1e293b',
 	},
 });
