@@ -20,37 +20,76 @@ const createEmailTransporter = () => {
 // Fonction pour envoyer une notification/message automatique
 const sendNotificationMessage = async (expediteurId, destinataireId, contenu, type = 'general') => {
   try {
-    // Enregistrer en base de données
-    await db.execute(
-      'INSERT INTO messages (expediteur_id, destinataire_id, contenu, type) VALUES (?, ?, ?, ?)',
-      [expediteurId, destinataireId, contenu, type]
-    );
-
-    console.log(`📧 Notification envoyée: ${type} - ${contenu.substring(0, 50)}...`);
+    console.log(`🔔 DÉBUT sendNotificationMessage:`);
+    console.log(`- Expediteur ID: ${expediteurId}`);
+    console.log(`- Destinataire ID: ${destinataireId}`);
+    console.log(`- Type: ${type}`);
+    console.log(`- Contenu: ${contenu.substring(0, 100)}...`);
     
-    // Récupérer l'email du destinataire s'il s'agit d'un patient
-    if (type.includes('traitement') || type.includes('rendez_vous')) {
-      try {
-        const [patients] = await db.execute(
-          'SELECT email FROM patients WHERE id = ?',
-          [destinataireId]
-        );
+    // Pour TOUTES les notifications aux patients, on envoie seulement l'email (pas de stockage en base)
+    // On vérifie si c'est une notification patient (destinataireId correspond à un patient)
+    try {
+      const [patients] = await db.execute(
+        'SELECT email FROM patients WHERE id = ?',
+        [destinataireId]
+      );
+      
+      console.log(`👤 Recherche patient ID ${destinataireId}:`, patients);
+      
+      if (patients.length > 0) {
+        // C'est bien un patient, on envoie l'email sans stocker en base
+        console.log(`🎯 Notification patient détectée - envoi email direct sans stockage base`);
         
-        if (patients.length > 0 && patients[0].email) {
-          await sendEmail(
+        if (patients[0].email) {
+          console.log(`📧 Email patient trouvé: ${patients[0].email}`);
+          console.log(`🚀 Envoi email en cours...`);
+          
+          const emailSuccess = await sendEmail(
             patients[0].email,
             'Notification - Système Hospitalier',
             contenu
           );
+          
+          console.log(`📧 Résultat envoi email: ${emailSuccess ? 'SUCCÈS' : 'ÉCHEC'}`);
+          
+          if (emailSuccess) {
+            console.log(`✅ Email envoyé avec succès - pas de stockage en base pour les patients`);
+          }
+        } else {
+          console.log(`⚠️  Patient trouvé mais pas d'email configuré`);
         }
-      } catch (emailError) {
-        console.log('📧 Pas d\'email patient configuré ou erreur envoi');
+        
+        console.log(`✅ FIN sendNotificationMessage (patient)`);
+        return true;
+      } else {
+        // Ce n'est pas un patient, c'est peut-être un user
+        console.log(`👥 Pas un patient - vérification si c'est un utilisateur...`);
+        
+        const [users] = await db.execute(
+          'SELECT email FROM users WHERE id = ?',
+          [destinataireId]
+        );
+        
+        if (users.length > 0) {
+          // C'est un utilisateur, on stocke en base
+          console.log(`💬 Message utilisateur - stockage en base`);
+          await db.execute(
+            'INSERT INTO messages (expediteur_id, destinataire_id, contenu, type) VALUES (?, ?, ?, ?)',
+            [expediteurId, destinataireId, contenu, type]
+          );
+          console.log(`📧 Message enregistré en base`);
+        } else {
+          console.log(`⚠️  Destinataire ID ${destinataireId} non trouvé ni dans patients ni dans users`);
+        }
       }
+    } catch (searchError) {
+      console.log('❌ Erreur lors de la recherche destinataire:', searchError);
     }
     
+    console.log(`✅ FIN sendNotificationMessage`);
     return true;
   } catch (error) {
-    console.error('Erreur envoi notification:', error);
+    console.error('❌ Erreur envoi notification:', error);
     return false;
   }
 };

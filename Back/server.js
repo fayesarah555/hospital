@@ -10,6 +10,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Test de la connexion base de données au démarrage
+require('./config/db');
+
+// Test de la configuration email au démarrage
+(async () => {
+  try {
+    console.log('🔍 Test de la configuration email...');
+    const { testEmailConfig } = require('./utils/notifications');
+    const emailOk = await testEmailConfig();
+    if (emailOk) {
+      console.log('✅ Configuration email OK');
+    } else {
+      console.log('⚠️  Configuration email non fonctionnelle');
+    }
+  } catch (error) {
+    console.log('⚠️  Erreur test email:', error.message);
+  }
+})();
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/patients', require('./routes/patients'));
