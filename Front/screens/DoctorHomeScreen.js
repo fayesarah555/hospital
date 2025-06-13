@@ -186,6 +186,13 @@ Merci de votre attention.`;
 			</TouchableOpacity>
 
 			<TouchableOpacity
+				style={[styles.ButtonNav, { backgroundColor: '#17a2b8' }]}
+				onPress={() => setAddModalVisible(true)}
+			>
+				<Text style={styles.ButtonNavText}>➕ Ajouter un patient</Text>
+			</TouchableOpacity>
+
+			<TouchableOpacity
 				style={styles.ButtonNav}
 				onPress={() => navigation.navigate('AppointmentScreen')}
 			>
@@ -193,10 +200,10 @@ Merci de votre attention.`;
 			</TouchableOpacity>
 
 			<TouchableOpacity
-				style={[styles.ButtonNav, { backgroundColor: '#17a2b8' }]}
-				onPress={() => setAddModalVisible(true)}
+				style={styles.ButtonNav}
+				onPress={() => navigation.navigate('AppointmentsListScreen')}
 			>
-				<Text style={styles.ButtonNavText}>➕ Ajouter un patient</Text>
+				<Text style={styles.ButtonNavText}>📅 Liste des rendez-vous</Text>
 			</TouchableOpacity>
 
 			<FlatList
