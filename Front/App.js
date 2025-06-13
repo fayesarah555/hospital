@@ -2,12 +2,12 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import RHHomeScreen from './hospital/Front/screens/RHHomeScreen';
-import DoctorHomeScreen from './hospital/Front/screens/DoctorHomeScreen';
-import AdminHomeScreen from './hospital/Front/screens/AdminHomeScreen';
-import PatientsListScreen from './hospital/Front/screens/PatientsListScreen';
-import DoctorStack from './hospital/Front/screens/DoctorStack';
-import RHStack from './hospital/Front/screens/RHStack';
+import RHHomeScreen from './screens/RHHomeScreen';
+import DoctorHomeScreen from './screens/DoctorHomeScreen';
+import AdminHomeScreen from './screens/AdminHomeScreen';
+import PatientsListScreen from './screens/PatientsListScreen';
+import DoctorStack from './screens/DoctorStack';
+import RHStack from './screens/RHStack';
 
 const Tab = createBottomTabNavigator();
 
