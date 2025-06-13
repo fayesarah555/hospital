@@ -15,15 +15,10 @@ export default function LoginScreen({ navigation }) {
 	const [mail, setMail] = useState('');
 	const [password, setPassword] = useState('');
 
-	const handleLogin = async () => {
-		try {
-			const res = await axios.post('http://localhost:3001/login', { mail, password });
-			if (res.data.role === 'RH') navigation.replace('RHHome');
-			else if (res.data.role === 'Doctor') navigation.replace('DoctorHome');
-			else if (res.data.role === 'Admin') navigation.replace('AdminHome');
-		} catch (e) {
-			Alert.alert('Erreur', 'Identifiants incorrects');
-		}
+	// On supprime axios et la vraie connexion pour le moment
+	const handleLogin = () => {
+		// Juste rediriger vers l'app principale (MainTabs)
+		navigation.replace('MainTabs');
 	};
 
 	return (
@@ -56,7 +51,7 @@ export default function LoginScreen({ navigation }) {
 
 				<TouchableOpacity
 					style={styles.secondaryButton}
-					onPress={() => navigation.navigate('Register')}
+					onPress={() => navigation.navigate('RegisterScreen')}
 				>
 					<Text style={styles.buttonText}>📝 Créer un compte</Text>
 				</TouchableOpacity>
