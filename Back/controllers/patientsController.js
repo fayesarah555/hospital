@@ -95,7 +95,7 @@ const patientsController = {
   // Créer un patient
   createPatient: async (req, res) => {
     try {
-      const { nom, prenom, age, poids, taille, traitement_en_cours } = req.body;
+       const { nom, prenom, age, poids, taille, email, traitement_en_cours } = req.body;
 
       // Validations
       if (!nom || !prenom || !age) {
@@ -115,8 +115,8 @@ const patientsController = {
       }
 
       const [result] = await db.execute(
-        'INSERT INTO patients (nom, prenom, age, poids, taille, traitement_en_cours) VALUES (?, ?, ?, ?, ?, ?)',
-        [nom, prenom, age, poids || null, taille || null, traitement_en_cours || null]
+           'INSERT INTO patients (nom, prenom, age, poids, taille, email, traitement_en_cours) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [nom, prenom, age, poids, taille, email, traitement_en_cours]
       );
 
       res.status(201).json({
