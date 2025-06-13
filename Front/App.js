@@ -8,6 +8,8 @@ import AdminHomeScreen from './screens/AdminHomeScreen';
 import PatientsListScreen from './screens/PatientsListScreen';
 import DoctorStack from './screens/DoctorStack';
 import RHStack from './screens/RHStack';
+import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -52,6 +54,8 @@ export default function App() {
 				<Tab.Screen name="DoctorHome" component={DoctorStack} />
 				<Tab.Screen name="AdminHome" component={AdminHomeScreen} />
 				<Tab.Screen name="PatientsList" component={PatientsListScreen} />
+				<Tab.Screen name="Login" component={LoginScreen} />
+				<Tab.Screen name="Register" component={RegisterScreen} />
 			</Tab.Navigator>
 		</NavigationContainer>
 	);
