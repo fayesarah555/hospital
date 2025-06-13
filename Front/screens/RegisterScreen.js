@@ -19,26 +19,27 @@ export default function RegisterScreen({ navigation }) {
 	const [lastName, setLastName] = useState('');
 	const [email, setEmail] = useState('');
 
-	const handleRegister = async () => {
-		if (!password || !firstName || !lastName || !email) {
-			Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-			return;
-		}
-		try {
-			await axios.post('http://localhost:3001/register', {
-				password,
-				role,
-				firstName,
-				lastName,
-				email,
-			});
-			Alert.alert('Succès', 'Utilisateur créé', [
-				{ text: 'OK', onPress: () => navigation.goBack() },
-			]);
-		} catch (e) {
-			Alert.alert('Erreur', "Impossible de créer l'utilisateur");
-		}
-	};
+const handleRegister = async () => {
+	if (!password || !firstName || !lastName || !email) {
+		Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+		return;
+	}
+	try {
+		await axios.post('http://192.168.1.193:3001/api/auth/register', {
+			nom: lastName,
+			prenom: firstName,
+			email: email,
+			password: password,
+			role: role,
+		});
+		Alert.alert('Succès', 'Utilisateur créé', [
+			{ text: 'OK', onPress: () => navigation.goBack() },
+		]);
+	} catch (e) {
+		console.error(e.response?.data || e.message); // pour te faciliter le debug
+		Alert.alert('Erreur', "Impossible de créer l'utilisateur");
+	}
+};
 
 	return (
 		<KeyboardAvoidingView

@@ -99,7 +99,10 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route non trouvée' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-  console.log(`📋 Documentation: http://localhost:${PORT}/`);
+// app.listen(PORT,'0.0.0.0' () => {
+//   console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+//   console.log(`📋 Documentation: http://0.0.0.0:${PORT}/`);
+// }); 
+app.listen(3001, '0.0.0.0', () => {
+	console.log("Server is running on port 3001");
 });

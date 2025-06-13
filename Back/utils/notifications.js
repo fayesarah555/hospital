@@ -134,17 +134,17 @@ const sendEmail = async (to, subject, text, html = null) => {
 // Fonction pour tester la configuration email
 const testEmailConfig = async () => {
   try {
-    console.log('📧 Variables email:');
-    console.log('- EMAIL_HOST:', process.env.EMAIL_HOST);
-    console.log('- EMAIL_PORT:', process.env.EMAIL_PORT);
-    console.log('- EMAIL_USER:', process.env.EMAIL_USER);
-    console.log('- EMAIL_PASS:', process.env.EMAIL_PASS ? 'Configuré' : 'NON CONFIGURÉ');
-    console.log('- EMAIL_FROM_NAME:', process.env.EMAIL_FROM_NAME);
-    console.log('- EMAIL_FROM:', process.env.EMAIL_FROM);
+    // console.log('📧 Variables email:');
+    // console.log('- EMAIL_HOST:', process.env.EMAIL_HOST);
+    // console.log('- EMAIL_PORT:', process.env.EMAIL_PORT);
+    // console.log('- EMAIL_USER:', process.env.EMAIL_USER);
+    // console.log('- EMAIL_PASS:', process.env.EMAIL_PASS ? 'Configuré' : 'NON CONFIGURÉ');
+    // console.log('- EMAIL_FROM_NAME:', process.env.EMAIL_FROM_NAME);
+    // console.log('- EMAIL_FROM:', process.env.EMAIL_FROM);
     
     const transporter = createEmailTransporter();
     await transporter.verify();
-    console.log('✅ Configuration email valide');
+    // console.log('✅ Configuration email valide');
     return true;
   } catch (error) {
     console.error('❌ Erreur configuration email:', error.message);
@@ -155,8 +155,8 @@ const testEmailConfig = async () => {
 // Fonction pour envoyer un email de test
 const sendTestEmail = async () => {
   try {
-    console.log('🧪 Début du test email...');
-    console.log('📧 Destination:', process.env.EMAIL_USER);
+    // console.log('🧪 Début du test email...');
+    // console.log('📧 Destination:', process.env.EMAIL_USER);
     
     const success = await sendEmail(
       process.env.EMAIL_USER, // S'envoyer un email de test
