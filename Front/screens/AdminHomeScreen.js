@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	View,
 	Text,
@@ -7,88 +7,255 @@ import {
 	TouchableOpacity,
 	Modal,
 	StyleSheet,
+	Alert,
+	ActivityIndicator,
+	RefreshControl,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { usersAPI, getCurrentUser } from '../services/api';
 
 export default function AdminHomeScreen() {
-	const [users, setUsers] = useState([
-		{ id: '1', username: 'rh1', role: 'RH', details: 'Details RH1' },
-		{ id: '2', username: 'doctor1', role: 'Doctor', details: 'Details Doctor1' },
-		{ id: '3', username: 'rh2', role: 'RH', details: 'Details RH2' },
-		{ id: '4', username: 'doctor2', role: 'Doctor', details: 'Details Doctor2' },
-	]);
-	const [filteredUsers, setFilteredUsers] = useState(users);
+	// États pour les utilisateurs
+	const [users, setUsers] = useState([]);
+	const [filteredUsers, setFilteredUsers] = useState([]);
 	const [selectedRole, setSelectedRole] = useState('All');
+	const [isLoading, setIsLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
+
+	// États pour les modals
 	const [modalVisible, setModalVisible] = useState(false);
-	const [selectedUser, setSelectedUser] = useState(null);
-	const [editUsername, setEditUsername] = useState('');
-	const [editDetails, setEditDetails] = useState('');
-	const [newUser, setNewUser] = useState({ username: '', role: 'RH', details: '' });
 	const [addUserVisible, setAddUserVisible] = useState(false);
+	const [selectedUser, setSelectedUser] = useState(null);
 
-	const primaryColor = '#007bff';
-	const secondaryColor = '#6c757d';
+	// États pour l'édition
+	const [editEmail, setEditEmail] = useState('');
+	const [editNom, setEditNom] = useState('');
+	const [editPrenom, setEditPrenom] = useState('');
+	const [editRole, setEditRole] = useState('rh');
 
-	const handleFilter = role => {
-		setSelectedRole(role);
-		setFilteredUsers(role === 'All' ? users : users.filter(user => user.role === role));
+	// États pour l'ajout
+	const [newUser, setNewUser] = useState({
+		email: '',
+		nom: '',
+		prenom: '',
+		role: 'rh',
+		mot_de_passe: '',
+		specialite: ''
+	});
+
+	// États pour l'utilisateur connecté
+	const [currentUser, setCurrentUser] = useState(null);
+
+	// Charger les données au montage
+	useEffect(() => {
+		loadUsers();
+		loadCurrentUser();
+	}, []);
+
+	// Charger l'utilisateur connecté
+	const loadCurrentUser = async () => {
+		try {
+			const user = await getCurrentUser();
+			setCurrentUser(user);
+		} catch (error) {
+			console.log('Erreur chargement utilisateur:', error);
+		}
 	};
 
-	const handleSelectUser = user => {
+	// Charger la liste des utilisateurs
+	const loadUsers = async () => {
+		try {
+			console.log('📋 Chargement des utilisateurs...');
+			const response = await usersAPI.getAll();
+			console.log('✅ Utilisateurs chargés:', response.data.length);
+			
+			setUsers(response.data);
+			setFilteredUsers(response.data);
+		} catch (error) {
+			console.error('❌ Erreur chargement utilisateurs:', error);
+			Alert.alert('Erreur', 'Impossible de charger les utilisateurs');
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	// Actualiser les données
+	const onRefresh = async () => {
+		setRefreshing(true);
+		await loadUsers();
+		setRefreshing(false);
+	};
+
+	// Filtrer par rôle
+	const handleFilter = (role) => {
+		setSelectedRole(role);
+		if (role === 'All') {
+			setFilteredUsers(users);
+		} else {
+			setFilteredUsers(users.filter(user => user.role === role));
+		}
+	};
+
+	// Sélectionner un utilisateur pour édition
+	const handleSelectUser = (user) => {
 		setSelectedUser(user);
-		setEditUsername(user.username);
-		setEditDetails(user.details);
+		setEditEmail(user.email);
+		setEditNom(user.nom);
+		setEditPrenom(user.prenom);
+		setEditRole(user.role);
 		setModalVisible(true);
 	};
 
-	const handleSaveUser = () => {
-		const updatedUsers = users.map(user =>
-			user.id === selectedUser.id
-				? { ...user, username: editUsername, details: editDetails }
-				: user
-		);
-		setUsers(updatedUsers);
-		handleFilter(selectedRole);
-		setModalVisible(false);
+	// Sauvegarder les modifications d'un utilisateur
+	const handleSaveUser = async () => {
+		if (!selectedUser) return;
+
+		try {
+			console.log('💾 Modification utilisateur:', selectedUser.id);
+			
+			const updateData = {
+				email: editEmail,
+				nom: editNom,
+				prenom: editPrenom,
+				role: editRole,
+			};
+
+			await usersAPI.update(selectedUser.id, updateData);
+			
+			Alert.alert('Succès', 'Utilisateur modifié avec succès');
+			setModalVisible(false);
+			loadUsers(); // Recharger la liste
+			
+		} catch (error) {
+			console.error('❌ Erreur modification:', error);
+			Alert.alert('Erreur', 'Impossible de modifier l\'utilisateur');
+		}
 	};
 
+	// Supprimer un utilisateur
 	const handleDeleteUser = () => {
-		const updatedUsers = users.filter(user => user.id !== selectedUser.id);
-		setUsers(updatedUsers);
-		handleFilter(selectedRole);
-		setModalVisible(false);
+		if (!selectedUser) return;
+
+		Alert.alert(
+			'Confirmation',
+			`Êtes-vous sûr de vouloir supprimer ${selectedUser.prenom} ${selectedUser.nom} ?`,
+			[
+				{ text: 'Annuler', style: 'cancel' },
+				{
+					text: 'Supprimer',
+					style: 'destructive',
+					onPress: async () => {
+						try {
+							console.log('🗑️ Suppression utilisateur:', selectedUser.id);
+							
+							await usersAPI.delete(selectedUser.id);
+							
+							Alert.alert('Succès', 'Utilisateur supprimé');
+							setModalVisible(false);
+							loadUsers(); // Recharger la liste
+							
+						} catch (error) {
+							console.error('❌ Erreur suppression:', error);
+							Alert.alert('Erreur', 'Impossible de supprimer l\'utilisateur');
+						}
+					}
+				}
+			]
+		);
 	};
 
-	const handleAddUser = () => {
-		const newUserWithId = { ...newUser, id: String(Date.now()) };
-		const updatedUsers = [...users, newUserWithId];
-		setUsers(updatedUsers);
-		handleFilter(selectedRole);
-		setNewUser({ username: '', role: 'RH', details: '' });
-		setAddUserVisible(false);
+	// Ajouter un nouvel utilisateur
+	const handleAddUser = async () => {
+		// Validation
+		if (!newUser.email || !newUser.nom || !newUser.prenom || !newUser.mot_de_passe) {
+			Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+			return;
+		}
+
+		try {
+			console.log('➕ Ajout nouvel utilisateur');
+			
+			await usersAPI.create(newUser);
+			
+			Alert.alert('Succès', 'Utilisateur créé avec succès');
+			setAddUserVisible(false);
+			setNewUser({
+				email: '',
+				nom: '',
+				prenom: '',
+				role: 'rh',
+				mot_de_passe: '',
+				specialite: ''
+			});
+			loadUsers(); // Recharger la liste
+			
+		} catch (error) {
+			console.error('❌ Erreur création:', error);
+			Alert.alert('Erreur', 'Impossible de créer l\'utilisateur');
+		}
 	};
 
+	// Rendu d'un utilisateur
 	const renderItem = ({ item }) => {
-		const roleColor = item.role === 'Doctor' ? '#10b981' : '#3b82f6';
+		const roleColors = {
+			admin: '#dc3545',
+			medecin: '#28a745',
+			rh: '#007bff',
+			infirmier: '#ffc107'
+		};
+
+		const roleLabels = {
+			admin: '🔴 Admin',
+			medecin: '🟢 Médecin',
+			rh: '🔵 RH',
+			infirmier: '🟡 Infirmier'
+		};
+
+		const roleColor = roleColors[item.role] || '#6c757d';
 
 		return (
 			<TouchableOpacity
 				style={[styles.userItem, { borderLeftColor: roleColor }]}
 				onPress={() => handleSelectUser(item)}
 			>
-				<Text style={styles.username}>{item.username}</Text>
-				<Text style={styles.role}>{item.role === 'Doctor' ? '🩺 Médecin' : '🧑‍💼 RH'}</Text>
-				<Text style={styles.details}>{item.details}</Text>
+				<Text style={styles.username}>
+					{item.prenom} {item.nom}
+				</Text>
+				<Text style={styles.email}>{item.email}</Text>
+				<Text style={[styles.role, { color: roleColor }]}>
+					{roleLabels[item.role] || item.role}
+				</Text>
+				{item.specialite && (
+					<Text style={styles.specialite}>
+						📋 {item.specialite}
+					</Text>
+				)}
 			</TouchableOpacity>
 		);
 	};
 
+	if (isLoading) {
+		return (
+			<View style={styles.loadingContainer}>
+				<ActivityIndicator size="large" color="#007bff" />
+				<Text style={styles.loadingText}>Chargement des utilisateurs...</Text>
+			</View>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>Gestion des utilisateurs</Text>
+			<Text style={styles.title}>👥 Gestion des utilisateurs</Text>
+			
+			{currentUser && (
+				<Text style={styles.subtitle}>
+					Connecté en tant que {currentUser.prenom} {currentUser.nom}
+				</Text>
+			)}
 
+			{/* Filtres */}
 			<View style={styles.filters}>
-				{['All', 'RH', 'Doctor'].map(role => (
+				{['All', 'admin', 'medecin', 'rh', 'infirmier'].map(role => (
 					<TouchableOpacity
 						key={role}
 						style={[
@@ -103,58 +270,40 @@ export default function AdminHomeScreen() {
 								selectedRole === role && { color: '#fff' },
 							]}
 						>
-							{role === 'All' ? 'Tous' : role === 'Doctor' ? 'Médecin' : role}
+							{role === 'All' ? 'Tous' : 
+							 role === 'medecin' ? 'Médecins' :
+							 role === 'admin' ? 'Admins' :
+							 role === 'rh' ? 'RH' : 'Infirmiers'}
 						</Text>
 					</TouchableOpacity>
 				))}
 			</View>
 
+			{/* Liste des utilisateurs */}
 			<FlatList
 				data={filteredUsers}
 				renderItem={renderItem}
-				keyExtractor={item => item.id}
+				keyExtractor={item => item.id.toString()}
 				style={styles.list}
+				refreshControl={
+					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+				}
+				ListEmptyComponent={() => (
+					<View style={styles.emptyContainer}>
+						<Text style={styles.emptyText}>Aucun utilisateur trouvé</Text>
+					</View>
+				)}
 			/>
 
+			{/* Bouton ajouter */}
 			<TouchableOpacity
-				style={styles.toggleAddButton}
-				onPress={() => setAddUserVisible(!addUserVisible)}
+				style={styles.addButton}
+				onPress={() => setAddUserVisible(true)}
 			>
-				<Text style={styles.addButtonText}>
-					{addUserVisible ? '❌ Fermer le formulaire' : '➕ Ajouter un utilisateur'}
-				</Text>
+				<Text style={styles.addButtonText}>➕ Ajouter un utilisateur</Text>
 			</TouchableOpacity>
 
-			{addUserVisible && (
-				<View style={styles.inputContainer}>
-					<TextInput
-						style={styles.input}
-						placeholder="Nom d'utilisateur"
-						value={newUser.username}
-						onChangeText={text => setNewUser({ ...newUser, username: text })}
-					/>
-					<TextInput
-						style={styles.input}
-						placeholder="Détails"
-						value={newUser.details}
-						onChangeText={text => setNewUser({ ...newUser, details: text })}
-					/>
-
-					<Picker
-						selectedValue={newUser.role}
-						style={styles.picker}
-						onValueChange={itemValue => setNewUser({ ...newUser, role: itemValue })}
-					>
-						<Picker.Item label="RH" value="RH" />
-						<Picker.Item label="Médecin" value="Doctor" />
-					</Picker>
-
-					<TouchableOpacity style={styles.addButton} onPress={handleAddUser}>
-						<Text style={styles.addButtonText}>💾 Ajouter</Text>
-					</TouchableOpacity>
-				</View>
-			)}
-
+			{/* Modal d'édition */}
 			<Modal
 				visible={modalVisible}
 				transparent
@@ -167,20 +316,38 @@ export default function AdminHomeScreen() {
 
 						<TextInput
 							style={styles.input}
-							placeholder="Nom d'utilisateur"
-							value={editUsername}
-							onChangeText={setEditUsername}
+							placeholder="Prénom"
+							value={editPrenom}
+							onChangeText={setEditPrenom}
 						/>
 						<TextInput
 							style={styles.input}
-							placeholder="Détails"
-							value={editDetails}
-							onChangeText={setEditDetails}
+							placeholder="Nom"
+							value={editNom}
+							onChangeText={setEditNom}
 						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Email"
+							value={editEmail}
+							onChangeText={setEditEmail}
+							keyboardType="email-address"
+						/>
+
+						<Picker
+							selectedValue={editRole}
+							style={styles.picker}
+							onValueChange={setEditRole}
+						>
+							<Picker.Item label="Admin" value="admin" />
+							<Picker.Item label="Médecin" value="medecin" />
+							<Picker.Item label="RH" value="rh" />
+							<Picker.Item label="Infirmier" value="infirmier" />
+						</Picker>
 
 						<View style={styles.modalButtons}>
 							<TouchableOpacity
-								style={[styles.button, { backgroundColor: primaryColor }]}
+								style={[styles.button, { backgroundColor: '#28a745' }]}
 								onPress={handleSaveUser}
 							>
 								<Text style={styles.buttonText}>💾 Enregistrer</Text>
@@ -192,8 +359,81 @@ export default function AdminHomeScreen() {
 								<Text style={styles.buttonText}>🗑️ Supprimer</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
-								style={[styles.button, { backgroundColor: secondaryColor }]}
+								style={[styles.button, { backgroundColor: '#6c757d' }]}
 								onPress={() => setModalVisible(false)}
+							>
+								<Text style={styles.buttonText}>❌ Annuler</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Modal d'ajout */}
+			<Modal
+				visible={addUserVisible}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setAddUserVisible(false)}
+			>
+				<View style={styles.centeredView}>
+					<View style={styles.modalView}>
+						<Text style={styles.modalTitle}>Nouvel utilisateur</Text>
+
+						<TextInput
+							style={styles.input}
+							placeholder="Prénom *"
+							value={newUser.prenom}
+							onChangeText={text => setNewUser({...newUser, prenom: text})}
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Nom *"
+							value={newUser.nom}
+							onChangeText={text => setNewUser({...newUser, nom: text})}
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Email *"
+							value={newUser.email}
+							onChangeText={text => setNewUser({...newUser, email: text})}
+							keyboardType="email-address"
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Mot de passe *"
+							value={newUser.mot_de_passe}
+							onChangeText={text => setNewUser({...newUser, mot_de_passe: text})}
+							secureTextEntry
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Spécialité (médecins)"
+							value={newUser.specialite}
+							onChangeText={text => setNewUser({...newUser, specialite: text})}
+						/>
+
+						<Picker
+							selectedValue={newUser.role}
+							style={styles.picker}
+							onValueChange={value => setNewUser({...newUser, role: value})}
+						>
+							<Picker.Item label="RH" value="rh" />
+							<Picker.Item label="Médecin" value="medecin" />
+							<Picker.Item label="Admin" value="admin" />
+							<Picker.Item label="Infirmier" value="infirmier" />
+						</Picker>
+
+						<View style={styles.modalButtons}>
+							<TouchableOpacity
+								style={[styles.button, { backgroundColor: '#28a745', flex: 1 }]}
+								onPress={handleAddUser}
+							>
+								<Text style={styles.buttonText}>➕ Créer</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={[styles.button, { backgroundColor: '#6c757d', flex: 1, marginLeft: 10 }]}
+								onPress={() => setAddUserVisible(false)}
 							>
 								<Text style={styles.buttonText}>❌ Annuler</Text>
 							</TouchableOpacity>
@@ -211,147 +451,158 @@ const styles = StyleSheet.create({
 		padding: 20,
 		backgroundColor: '#f1f5f9',
 	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	loadingText: {
+		marginTop: 10,
+		fontSize: 16,
+		color: '#6c757d',
+	},
 	title: {
-		fontSize: 30,
+		fontSize: 28,
 		fontWeight: 'bold',
 		textAlign: 'center',
-		marginBottom: 30,
+		marginBottom: 10,
 		color: '#1e293b',
+	},
+	subtitle: {
+		fontSize: 14,
+		textAlign: 'center',
+		marginBottom: 20,
+		color: '#6c757d',
 	},
 	filters: {
 		flexDirection: 'row',
-		justifyContent: 'space-around',
-		marginBottom: 25,
+		flexWrap: 'wrap',
+		justifyContent: 'center',
+		marginBottom: 20,
 	},
 	filterButton: {
-		paddingVertical: 10,
-		paddingHorizontal: 18,
-		borderRadius: 50,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 20,
 		backgroundColor: '#e2e8f0',
+		margin: 2,
 	},
 	filterButtonActive: {
 		backgroundColor: '#3b82f6',
 	},
 	filterButtonText: {
-		fontSize: 15,
+		fontSize: 12,
 		fontWeight: '600',
 		color: '#1e293b',
 	},
 	list: {
-		marginBottom: 20,
+		flex: 1,
+		marginBottom: 10,
 	},
 	userItem: {
 		backgroundColor: '#fff',
-		padding: 18,
-		borderRadius: 16,
-		marginBottom: 12,
-		flexDirection: 'column',
-		gap: 4,
-		borderLeftWidth: 6,
+		padding: 16,
+		borderRadius: 12,
+		marginBottom: 10,
+		borderLeftWidth: 4,
 		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
+		shadowOffset: { width: 0, height: 1 },
 		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
+		shadowRadius: 2,
+		elevation: 2,
 	},
 	username: {
-		fontSize: 18,
+		fontSize: 16,
 		fontWeight: 'bold',
 		color: '#0f172a',
+		marginBottom: 4,
+	},
+	email: {
+		fontSize: 14,
+		color: '#475569',
+		marginBottom: 4,
 	},
 	role: {
 		fontSize: 14,
 		fontWeight: '600',
-		color: '#6366f1',
+		marginBottom: 2,
 	},
-	details: {
-		fontSize: 14,
-		color: '#475569',
+	specialite: {
+		fontSize: 12,
+		color: '#6b7280',
+		fontStyle: 'italic',
 	},
-	inputContainer: {
-		marginTop: 10,
-		backgroundColor: '#fff',
-		padding: 16,
-		borderRadius: 16,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.08,
-		shadowRadius: 3,
-		elevation: 2,
+	emptyContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		paddingVertical: 50,
 	},
-	input: {
-		backgroundColor: '#e2e8f0',
-		padding: 12,
-		marginBottom: 12,
-		borderRadius: 10,
+	emptyText: {
 		fontSize: 16,
-		color: '#1e293b',
+		color: '#6c757d',
 	},
 	addButton: {
-		backgroundColor: '#10b981',
+		backgroundColor: '#007bff',
 		padding: 14,
 		borderRadius: 12,
 		alignItems: 'center',
-		marginTop: 8,
 	},
 	addButtonText: {
 		color: '#fff',
 		fontSize: 16,
 		fontWeight: '700',
 	},
-	toggleAddButton: {
-		backgroundColor: '#0ea5e9',
-		padding: 14,
-		borderRadius: 14,
-		alignItems: 'center',
-		marginBottom: 16,
-	},
 	centeredView: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
-		backgroundColor: 'rgba(0, 0, 0, 0.4)',
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 	},
 	modalView: {
 		width: '90%',
-		backgroundColor: '#f8fafc',
-		padding: 24,
-		borderRadius: 18,
+		maxHeight: '80%',
+		backgroundColor: '#fff',
+		padding: 20,
+		borderRadius: 16,
 		elevation: 10,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.2,
-		shadowRadius: 6,
 	},
 	modalTitle: {
-		fontSize: 22,
+		fontSize: 20,
 		fontWeight: '700',
-		marginBottom: 18,
+		marginBottom: 15,
 		textAlign: 'center',
 		color: '#0f172a',
+	},
+	input: {
+		backgroundColor: '#f8f9fa',
+		padding: 12,
+		marginBottom: 10,
+		borderRadius: 8,
+		borderWidth: 1,
+		borderColor: '#e9ecef',
+		fontSize: 16,
+	},
+	picker: {
+		backgroundColor: '#f8f9fa',
+		marginBottom: 15,
+		borderRadius: 8,
 	},
 	modalButtons: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		marginTop: 20,
+		marginTop: 10,
 	},
 	button: {
 		flex: 1,
 		paddingVertical: 12,
 		marginHorizontal: 5,
-		borderRadius: 10,
+		borderRadius: 8,
 		alignItems: 'center',
 	},
 	buttonText: {
 		color: '#fff',
 		fontWeight: '700',
 		fontSize: 14,
-	},
-	picker: {
-		backgroundColor: '#e2e8f0',
-		marginBottom: 10,
-		borderRadius: 10,
-		paddingHorizontal: 10,
-		color: '#1e293b',
 	},
 });
