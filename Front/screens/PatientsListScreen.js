@@ -12,6 +12,13 @@ import {
 	Modal,
 } from 'react-native';
 import { patientsAPI, traitementsAPI, getCurrentUser } from '../services/api';
+import { 
+	PermissionGuard, 
+	usePermissions, 
+	protectedAction,
+	getRoleLabel,
+	getRoleColor 
+} from '../utils/roleGuard';
 
 export default function PatientsListScreen({ navigation }) {
 	// États principaux
@@ -29,6 +36,10 @@ export default function PatientsListScreen({ navigation }) {
 
 	// États utilisateur
 	const [currentUser, setCurrentUser] = useState(null);
+
+	// 🔒 Hooks de permissions
+	const { hasAccess: canDeletePatient } = usePermissions('patients', 'delete');
+	const { hasAccess: canViewTreatments } = usePermissions('treatments', 'read');
 
 	// Charger les données au montage
 	useEffect(() => {
@@ -83,8 +94,14 @@ export default function PatientsListScreen({ navigation }) {
 		setRefreshing(false);
 	};
 
-	// Charger les traitements d'un patient
+	// 🔒 Charger les traitements d'un patient (si autorisé)
 	const loadPatientTreatments = async (patientId) => {
+		if (!canViewTreatments) {
+			console.log('🚫 Accès aux traitements refusé pour ce rôle');
+			setTreatments([]);
+			return;
+		}
+
 		try {
 			setLoadingTreatments(true);
 			console.log('💊 Chargement traitements patient:', patientId);
@@ -108,38 +125,43 @@ export default function PatientsListScreen({ navigation }) {
 		await loadPatientTreatments(patient.id);
 	};
 
-	// Supprimer un patient (admin/rh seulement)
+	// 🔒 Supprimer un patient (avec vérification des droits)
 	const handleDeletePatient = (patient) => {
-		if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'rh')) {
-			Alert.alert('Erreur', 'Vous n\'avez pas les droits pour supprimer un patient');
-			return;
-		}
-
-		Alert.alert(
-			'Confirmation',
-			`Êtes-vous sûr de vouloir supprimer le patient ${patient.prenom} ${patient.nom} ?`,
-			[
-				{ text: 'Annuler', style: 'cancel' },
-				{
-					text: 'Supprimer',
-					style: 'destructive',
-					onPress: async () => {
-						try {
-							console.log('🗑️ Suppression patient:', patient.id);
-							
-							await patientsAPI.delete(patient.id);
-							
-							Alert.alert('Succès', 'Patient supprimé');
-							setModalVisible(false);
-							loadPatients(); // Recharger la liste
-							
-						} catch (error) {
-							console.error('❌ Erreur suppression:', error);
-							Alert.alert('Erreur', 'Impossible de supprimer le patient');
+		protectedAction(
+			'patients', 
+			'delete',
+			async () => {
+				Alert.alert(
+					'Confirmation',
+					`Êtes-vous sûr de vouloir supprimer le patient ${patient.prenom} ${patient.nom} ?`,
+					[
+						{ text: 'Annuler', style: 'cancel' },
+						{
+							text: 'Supprimer',
+							style: 'destructive',
+							onPress: async () => {
+								try {
+									console.log('🗑️ Suppression patient:', patient.id);
+									
+									await patientsAPI.delete(patient.id);
+									
+									Alert.alert('Succès', 'Patient supprimé');
+									setModalVisible(false);
+									loadPatients(); // Recharger la liste
+									
+								} catch (error) {
+									console.error('❌ Erreur suppression:', error);
+									Alert.alert('Erreur', 'Impossible de supprimer le patient');
+								}
+							}
 						}
-					}
-				}
-			]
+					]
+				);
+			},
+			{
+				alertTitle: 'Suppression non autorisée',
+				alertMessage: `Votre rôle "${currentUser?.role}" ne permet pas de supprimer des patients.`
+			}
 		);
 	};
 
@@ -192,7 +214,7 @@ export default function PatientsListScreen({ navigation }) {
 		</TouchableOpacity>
 	);
 
-	// Rendu d'un traitement
+	// Rendu d'un traitement (si autorisé)
 	const renderTreatment = ({ item }) => (
 		<View style={styles.treatmentItem}>
 			<Text style={styles.treatmentDate}>
@@ -226,6 +248,20 @@ export default function PatientsListScreen({ navigation }) {
 	return (
 		<View style={styles.container}>
 			<Text style={styles.title}>👥 Liste des patients</Text>
+			
+			{/* 🔒 Affichage du rôle et des permissions */}
+			{currentUser && (
+				<View style={[styles.roleInfo, { backgroundColor: getRoleColor(currentUser.role) + '20' }]}>
+					<Text style={[styles.roleText, { color: getRoleColor(currentUser.role) }]}>
+						{getRoleLabel(currentUser.role)}
+					</Text>
+					<Text style={styles.permissionText}>
+						{currentUser.role === 'admin' ? 'Tous droits' :
+						 currentUser.role === 'medecin' ? 'Consultation seulement' :
+						 currentUser.role === 'rh' ? 'Gestion patients' : 'Lecture seule'}
+					</Text>
+				</View>
+			)}
 			
 			{/* Barre de recherche */}
 			<TextInput
@@ -289,35 +325,52 @@ export default function PatientsListScreen({ navigation }) {
 									)}
 								</View>
 
-								{/* Historique des traitements */}
-								<View style={styles.treatmentsSection}>
-									<Text style={styles.sectionTitle}>💊 Historique des traitements</Text>
-									
-									{loadingTreatments ? (
-										<ActivityIndicator size="small" color="#007bff" />
-									) : treatments.length > 0 ? (
-										<FlatList
-											data={treatments}
-											renderItem={renderTreatment}
-											keyExtractor={item => item.id.toString()}
-											style={styles.treatmentsList}
-											nestedScrollEnabled
-										/>
-									) : (
-										<Text style={styles.noTreatments}>Aucun traitement enregistré</Text>
-									)}
-								</View>
+								{/* 🔒 Historique des traitements (si autorisé) */}
+								<PermissionGuard resource="treatments" action="read">
+									<View style={styles.treatmentsSection}>
+										<Text style={styles.sectionTitle}>💊 Historique des traitements</Text>
+										
+										{loadingTreatments ? (
+											<ActivityIndicator size="small" color="#007bff" />
+										) : treatments.length > 0 ? (
+											<FlatList
+												data={treatments}
+												renderItem={renderTreatment}
+												keyExtractor={item => item.id.toString()}
+												style={styles.treatmentsList}
+												nestedScrollEnabled
+											/>
+										) : (
+											<Text style={styles.noTreatments}>Aucun traitement enregistré</Text>
+										)}
+									</View>
+								</PermissionGuard>
+
+								{/* Message pour les rôles sans accès aux traitements */}
+								{!canViewTreatments && (
+									<View style={styles.restrictedSection}>
+										<Text style={styles.restrictedText}>
+											🔒 Accès aux traitements non autorisé pour votre rôle
+										</Text>
+									</View>
+								)}
 
 								{/* Boutons */}
 								<View style={styles.modalButtons}>
-									{(currentUser?.role === 'admin' || currentUser?.role === 'rh') && (
+									{/* 🔒 Bouton Supprimer (si autorisé) */}
+									<PermissionGuard 
+										resource="patients" 
+										action="delete"
+										fallback={null}
+									>
 										<TouchableOpacity
 											style={[styles.button, { backgroundColor: '#dc3545' }]}
 											onPress={() => handleDeletePatient(selectedPatient)}
 										>
 											<Text style={styles.buttonText}>🗑️ Supprimer</Text>
 										</TouchableOpacity>
-									)}
+									</PermissionGuard>
+									
 									<TouchableOpacity
 										style={[styles.button, { backgroundColor: '#6c757d', flex: 1 }]}
 										onPress={() => setModalVisible(false)}
@@ -354,8 +407,23 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: 'bold',
 		textAlign: 'center',
-		marginBottom: 20,
+		marginBottom: 15,
 		color: '#1e293b',
+	},
+	roleInfo: {
+		padding: 12,
+		borderRadius: 8,
+		marginBottom: 15,
+		alignItems: 'center',
+	},
+	roleText: {
+		fontSize: 14,
+		fontWeight: 'bold',
+	},
+	permissionText: {
+		fontSize: 12,
+		color: '#6c757d',
+		marginTop: 2,
 	},
 	searchInput: {
 		backgroundColor: '#fff',
@@ -521,6 +589,19 @@ const styles = StyleSheet.create({
 		fontStyle: 'italic',
 		textAlign: 'center',
 		paddingVertical: 20,
+	},
+	restrictedSection: {
+		backgroundColor: '#fff3cd',
+		padding: 15,
+		borderRadius: 8,
+		marginBottom: 20,
+		borderWidth: 1,
+		borderColor: '#ffeaa7',
+	},
+	restrictedText: {
+		fontSize: 14,
+		color: '#856404',
+		textAlign: 'center',
 	},
 	modalButtons: {
 		flexDirection: 'row',

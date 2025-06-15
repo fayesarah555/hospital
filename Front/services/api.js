@@ -1,14 +1,15 @@
 // services/api.js
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, DEV_CONFIG } from '../config/config';
 
-// Configuration de base
-const API_BASE_URL = 'http://localhost:3000/api';
+// ✅ Utiliser la configuration centralisée
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Instance axios configurée
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +22,10 @@ apiClient.interceptors.request.use(
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('🔑 Token ajouté aux headers');
+        if (DEV_CONFIG.LOG_REQUESTS) {
+          console.log('🔑 Token ajouté aux headers');
+          console.log(`📡 ${config.method?.toUpperCase()} ${config.url}`);
+        }
       }
     } catch (error) {
       console.log('⚠️ Erreur récupération token:', error);
@@ -33,8 +37,23 @@ apiClient.interceptors.request.use(
 
 // Intercepteur pour gérer les erreurs d'authentification
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (DEV_CONFIG.LOG_REQUESTS) {
+      console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    }
+    return response;
+  },
   async (error) => {
+    if (DEV_CONFIG.SHOW_ERROR_DETAILS) {
+      console.log('❌ Erreur API:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        message: error.message,
+        baseURL: error.config?.baseURL
+      });
+    }
+    
     if (error.response?.status === 401) {
       console.log('🚫 Token expiré, déconnexion...');
       await AsyncStorage.removeItem('authToken');
@@ -167,6 +186,38 @@ export const isAuthenticated = async () => {
     return !!token;
   } catch (error) {
     return false;
+  }
+};
+
+// 🔧 Fonction de diagnostic pour le debug
+export const diagnosePage = async () => {
+  console.log('🔍 DIAGNOSTIC API');
+  console.log('================');
+  console.log('URL de base:', API_BASE_URL);
+  console.log('Timeout:', API_CONFIG.TIMEOUT);
+  
+  try {
+    // Test de connectivité
+    const testResponse = await apiClient.get('/health', { timeout: 5000 });
+    console.log('✅ Backend accessible:', testResponse.status);
+  } catch (error) {
+    console.log('❌ Backend inaccessible:', error.message);
+    
+    if (error.code === 'NETWORK_ERROR') {
+      console.log('💡 Solutions possibles:');
+      console.log('- Vérifiez que le backend est démarré');
+      console.log(`- Vérifiez l'IP: ${API_CONFIG.HOST}`);
+      console.log(`- Vérifiez le port: ${API_CONFIG.PORT}`);
+      console.log('- Vérifiez votre connexion WiFi');
+    }
+  }
+  
+  // Vérification du token
+  const token = await AsyncStorage.getItem('authToken');
+  console.log('Token présent:', !!token);
+  
+  if (token) {
+    console.log('Token (premiers caractères):', token.substring(0, 20) + '...');
   }
 };
 
