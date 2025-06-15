@@ -1,53 +1,130 @@
-const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+// Back/middleware/auth.js - Version de diagnostic complète
 
-// Middleware de vérification du token
-const authenticateToken = async (req, res, next) => {
+const jwt = require('jsonwebtoken');
+
+// Middleware d'authentification avec diagnostic détaillé
+const authenticateToken = (req, res, next) => {
+  console.log('\n🔍 === DIAGNOSTIC AUTHENTIFICATION ===');
+  console.log('📡 Route appelée:', req.method, req.originalUrl);
+  console.log('🔑 Headers reçus:', {
+    authorization: req.headers.authorization ? 'Présent' : 'Absent',
+    contentType: req.headers['content-type'],
+    userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Token d\'accès requis' });
+    console.log('❌ ÉCHEC: Aucun token fourni');
+    console.log('📋 authHeader:', authHeader);
+    return res.status(401).json({ 
+      error: 'DIAGNOSTIC_AUTH',
+      message: 'Token manquant',
+      received: { authHeader }
+    });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Vérifier que l'utilisateur existe toujours
-    const [users] = await db.execute(
-      'SELECT id, nom, prenom, email, role FROM users WHERE id = ?',
-      [decoded.userId]
-    );
+  console.log('🔑 Token reçu (premiers caractères):', token.substring(0, 20) + '...');
+  console.log('🔑 JWT_SECRET présent:', !!process.env.JWT_SECRET);
 
-    if (users.length === 0) {
-      return res.status(401).json({ error: 'Utilisateur non trouvé' });
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      console.log('❌ ÉCHEC: Token invalide');
+      console.log('📋 Erreur JWT:', {
+        name: err.name,
+        message: err.message,
+        expiredAt: err.expiredAt
+      });
+      return res.status(403).json({ 
+        error: 'DIAGNOSTIC_TOKEN',
+        message: 'Token invalide',
+        details: err.message
+      });
     }
-
-    req.user = users[0];
+    
+    console.log('✅ Token valide décodé:');
+    console.log('📋 Données utilisateur:', {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      iat: new Date(decoded.iat * 1000).toLocaleString(),
+      exp: new Date(decoded.exp * 1000).toLocaleString()
+    });
+    
+    req.user = decoded;
+    console.log('✅ req.user défini, passage au middleware suivant');
     next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Token invalide' });
-  }
+  });
 };
 
-// Middleware de vérification des rôles
-const requireRole = (roles) => {
+// Middleware de vérification des rôles avec diagnostic détaillé
+const requireRole = (allowedRoles) => {
   return (req, res, next) => {
+    console.log('\n🔍 === DIAGNOSTIC AUTORISATION ===');
+    console.log('🎯 Rôles autorisés:', allowedRoles);
+    console.log('👤 req.user présent:', !!req.user);
+    
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentification requise' });
-    }
-
-    const userRole = req.user.role;
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
-
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ 
-        error: `Accès refusé. Rôles autorisés: ${allowedRoles.join(', ')}` 
+      console.log('❌ ÉCHEC: req.user non défini');
+      return res.status(401).json({ 
+        error: 'DIAGNOSTIC_USER',
+        message: 'Utilisateur non authentifié',
+        details: 'req.user est undefined'
       });
     }
 
+    console.log('👤 Utilisateur connecté:', {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role
+    });
+
+    console.log('🔍 Vérification du rôle:');
+    console.log('  - Rôle utilisateur:', `"${req.user.role}"`);
+    console.log('  - Type du rôle:', typeof req.user.role);
+    console.log('  - Rôles autorisés:', allowedRoles.map(r => `"${r}"`));
+    console.log('  - Types autorisés:', allowedRoles.map(r => typeof r));
+
+    // Vérification détaillée
+    const userRole = req.user.role;
+    const isAllowed = allowedRoles.includes(userRole);
+    
+    console.log('🔍 Test d\'inclusion:');
+    allowedRoles.forEach(role => {
+      const matches = role === userRole;
+      console.log(`  - "${role}" === "${userRole}": ${matches}`);
+    });
+    
+    console.log('✅ Résultat final: allowedRoles.includes(userRole) =', isAllowed);
+
+    if (!isAllowed) {
+      console.log('❌ ÉCHEC: Rôle non autorisé');
+      console.log('📋 Détails de l\'échec:', {
+        userRole: userRole,
+        allowedRoles: allowedRoles,
+        comparison: allowedRoles.map(role => ({ role, matches: role === userRole }))
+      });
+      
+      return res.status(403).json({ 
+        error: 'DIAGNOSTIC_ROLE',
+        message: `Accès refusé pour le rôle "${userRole}"`,
+        details: {
+          userRole: userRole,
+          allowedRoles: allowedRoles,
+          userRoleType: typeof userRole,
+          allowedRoleTypes: allowedRoles.map(r => typeof r)
+        }
+      });
+    }
+
+    console.log('✅ SUCCÈS: Accès autorisé pour le rôle:', userRole);
+    console.log('🎉 Passage au contrôleur\n');
     next();
   };
 };
 
-module.exports = { authenticateToken, requireRole };
+module.exports = {
+  authenticateToken,
+  requireRole
+};
