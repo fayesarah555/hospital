@@ -5,15 +5,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, Text, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-// Import des écrans
+// Import des écrans - vérification des exports
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import AdminHomeScreen from './screens/AdminHomeScreen';
-import PatientsListScreen from './screens/PatientsListScreen';
 import RHHomeScreen from './screens/RHHomeScreen';
 import DoctorHomeScreen from './screens/DoctorHomeScreen';
 import AppointmentScreen from './screens/AppointmentScreen';
 import AppointmentsListScreen from './screens/AppointmentsListScreen';
+
+// ✅ Import corrigé pour PatientsListScreen
+import PatientsListScreen from './screens/PatientsListScreen';
 
 // Import du service API et du système de rôles
 import { isAuthenticated, getCurrentUser } from './services/api';
@@ -208,7 +210,6 @@ export default function App() {
 								text: 'Se déconnecter',
 								onPress: () => {
 									setUser(null);
-									// Optionnel: effacer le token
 								}
 							}
 						]
@@ -298,7 +299,6 @@ export default function App() {
 			
 			default:
 				console.log('⚠️ Rôle non reconnu ou non autorisé:', user.role);
-				// Afficher un écran d'accès refusé au lieu de rediriger vers login
 				return (
 					<Stack.Navigator screenOptions={{ headerShown: false }}>
 						<Stack.Screen 
@@ -316,35 +316,3 @@ export default function App() {
 		</NavigationContainer>
 	);
 }
-
-/*
-🔒 RÉSUMÉ DES ACCÈS PAR RÔLE :
-
-🔴 ADMIN :
-- ✅ Gestion des utilisateurs
-- ✅ Consultation des patients  
-- ✅ Vue d'ensemble du système
-
-🟢 MÉDECIN :
-- ✅ Dashboard médecin
-- ✅ Gestion des patients (consultation)
-- ✅ Gestion complète des rendez-vous
-- ✅ Gestion des traitements
-
-🔵 RH :
-- ✅ Dashboard RH
-- ✅ Gestion des patients (création, modification)
-- ✅ Consultation des rendez-vous (lecture seule)
-
-🟡 INFIRMIER :
-- ✅ Dashboard RH (interface simplifiée)
-- ✅ Consultation des patients (lecture seule)
-- ❌ Pas d'accès aux rendez-vous ni traitements
-
-🚫 PROTECTIONS MISES EN PLACE :
-- Vérification du rôle à chaque navigation
-- Écrans protégés par ProtectedScreen
-- Validation des rôles au démarrage
-- Gestion des rôles invalides
-- Interface adaptée selon les permissions
-*/
