@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	View,
 	Text,
@@ -11,65 +11,61 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as MailComposer from 'expo-mail-composer';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DoctorHomeScreen({ navigation }) {
-	const [patients, setPatients] = useState([
-		{
-			id: '1',
-			name: 'Martin Dupont',
-			age: 45,
-			medicine: 'Doliprane',
-			lastVisit: '12/05/2023',
-		},
-		{
-			id: '2',
-			name: 'Sophie Lefebvre',
-			age: 32,
-			medicine: 'Toplexile',
-			lastVisit: '03/06/2023',
-		},
-		{
-			id: '3',
-			name: 'Jean Moreau',
-			age: 58,
-			medicine: 'Dafalgan',
-			lastVisit: '22/04/2023',
-		},
-		{
-			id: '4',
-			name: 'Marie Lambert',
-			age: 29,
-			medicine: 'Ventoline',
-			lastVisit: '17/06/2023',
-		},
-		{
-			id: '5',
-			name: 'Pierre Dubois',
-			age: 67,
-			medicine: 'Ibuprofène',
-			lastVisit: '05/05/2023',
-		},
-	]);
-
+	const [patients, setPatients] = useState([]);
 	const [modalVisible, setModalVisible] = useState(false);
-	const [addModalVisible, setAddModalVisible] = useState(false);
 	const [currentPatient, setCurrentPatient] = useState(null);
 	const [editName, setEditName] = useState('');
 	const [editAge, setEditAge] = useState('');
 	const [editMedicine, setEditMedicine] = useState('');
 	const [editLastVisit, setEditLastVisit] = useState('');
+	const [token, setToken] = useState(null);
+	const [searchText, setSearchText] = useState('');
 
-	const [newName, setNewName] = useState('');
-	const [newAge, setNewAge] = useState('');
-	const [newMedicine, setNewMedicine] = useState('');
-	const [newLastVisit, setNewLastVisit] = useState('');
+	useEffect(() => {
+		console.log('DoctorHomeScreen monté');
+		const getTokenAndFetchPatients = async () => {
+			console.log('Début de getTokenAndFetchPatients');
+			const storedToken = await AsyncStorage.getItem('token');
+			console.log('Token récupéré dans useEffect:', storedToken);
+			setToken(storedToken);
+			if (storedToken) {
+				console.log('Appel de fetchPatients avec le token');
+				fetchPatients(storedToken);
+			} else {
+				console.log('Aucun token trouvé dans AsyncStorage');
+			}
+		};
+		getTokenAndFetchPatients();
+	}, []);
+
+	const fetchPatients = async currentToken => {
+		if (!currentToken) {
+			console.log('Token non disponible');
+			return;
+		}
+		try {
+			const response = await axios.get('http://10.74.0.54:3001/api/patients', {
+				headers: {
+					Authorization: `Bearer ${currentToken}`,
+				},
+			});
+			setPatients(response.data);
+		} catch (error) {
+			console.error('Erreur lors de la récupération des patients:', error);
+			Alert.alert('Erreur', 'Impossible de récupérer la liste des patients');
+		}
+	};
 
 	const handlePress = patient => {
 		setCurrentPatient(patient);
-		setEditName(patient.name);
+		setEditName(`${patient.nom} ${patient.prenom}`);
 		setEditAge(patient.age.toString());
-		setEditMedicine(patient.medicine);
-		setEditLastVisit(patient.lastVisit);
+		setEditMedicine(patient.traitement_en_cours || '');
+		setEditLastVisit(patient.derniere_visite || '');
 		setModalVisible(true);
 	};
 
@@ -81,13 +77,21 @@ export default function DoctorHomeScreen({ navigation }) {
 				{ text: 'Annuler', style: 'cancel' },
 				{
 					text: 'Supprimer',
-					onPress: () => {
-						setPatients(patients.filter(patient => patient.id !== id));
-					},
+					onPress: () => deletePatient(id),
 					style: 'destructive',
 				},
 			]
 		);
+	};
+
+	const deletePatient = async id => {
+		try {
+			await axios.delete(`http://10.74.0.54:3001/api/patients/${id}`);
+			fetchPatients(); // Rafraîchir la liste après suppression
+		} catch (error) {
+			console.error('Erreur lors de la suppression du patient:', error);
+			Alert.alert('Erreur', 'Impossible de supprimer le patient');
+		}
 	};
 
 	const sendMedicineChangeEmail = async (patient, newMedicine) => {
@@ -97,64 +101,53 @@ export default function DoctorHomeScreen({ navigation }) {
 			return;
 		}
 
-		const body = `Bonjour ${patient.name},
+		const body = `Bonjour ${patient.nom} ${patient.prenom},
 
 ⚠️ Les informations concernant vos médicaments ont été modifiées.
 
 💊 Nouveau traitement : ${newMedicine}
 👨‍⚕️ Dernière mise à jour par le docteur : aujourd'hui
-📅 Dernière visite : ${patient.lastVisit}
+📅 Dernière visite : ${patient.derniere_visite || 'Non spécifiée'}
 
 Merci de votre attention.`;
 
 		await MailComposer.composeAsync({
-			recipients: ['yannis.bttr@gmail.com'],
-			subject: `Mise à jour des médicaments de ${patient.name}`,
+			recipients: [patient.email],
+			subject: `Mise à jour des médicaments de ${patient.nom} ${patient.prenom}`,
 			body,
 		});
 	};
 
 	const saveChanges = async () => {
 		if (currentPatient) {
-			const hasMedicineChanged = currentPatient.medicine !== editMedicine;
+			const hasMedicineChanged = currentPatient.traitement_en_cours !== editMedicine;
 
 			if (hasMedicineChanged) {
 				await sendMedicineChangeEmail(currentPatient, editMedicine);
 			}
 
-			setPatients(
-				patients.map(patient =>
-					patient.id === currentPatient.id
-						? {
-								...patient,
-								name: editName,
-								age: parseInt(editAge),
-								medicine: editMedicine,
-								lastVisit: editLastVisit,
-						  }
-						: patient
-				)
-			);
-			setModalVisible(false);
-		}
-	};
-	const addPatient = () => {
-		if (newName && newAge && newMedicine && newLastVisit) {
-			const newPatient = {
-				id: Date.now().toString(),
-				name: newName,
-				age: parseInt(newAge),
-				medicine: newMedicine,
-				lastVisit: newLastVisit,
-			};
-			setPatients([...patients, newPatient]);
-			setAddModalVisible(false);
-			setNewName('');
-			setNewAge('');
-			setNewMedicine('');
-			setNewLastVisit('');
-		} else {
-			Alert.alert('Champs manquants', 'Veuillez remplir tous les champs.');
+			try {
+				await axios.put(
+					`http://10.74.0.54:3001/api/patients/${currentPatient.id}`,
+					{
+						nom: editName.split(' ')[0],
+						prenom: editName.split(' ')[1],
+						age: parseInt(editAge),
+						traitement_en_cours: editMedicine,
+						derniere_visite: editLastVisit,
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+				fetchPatients(token);
+				setModalVisible(false);
+			} catch (error) {
+				console.error('Erreur lors de la mise à jour du patient:', error);
+				Alert.alert('Erreur', 'Impossible de mettre à jour le patient');
+			}
 		}
 	};
 
@@ -166,10 +159,16 @@ Merci de votre attention.`;
 			delayLongPress={500}
 		>
 			<View style={styles.patientInfo}>
-				<Text style={styles.patientName}>{item.name}</Text>
+				<Text style={styles.patientName}>
+					{item.nom} {item.prenom}
+				</Text>
 				<Text style={styles.patientDetails}>Âge: {item.age} ans</Text>
-				<Text style={styles.patientDetails}>Médicament(s): {item.medicine}</Text>
-				<Text style={styles.patientDetails}>Dernière visite: {item.lastVisit}</Text>
+				<Text style={styles.patientDetails}>
+					Traitement: {item.traitement_en_cours || 'Aucun'}
+				</Text>
+				<Text style={styles.patientDetails}>
+					Dernière visite: {item.derniere_visite || 'Non spécifiée'}
+				</Text>
 			</View>
 		</TouchableOpacity>
 	);
@@ -177,20 +176,6 @@ Merci de votre attention.`;
 	return (
 		<View style={styles.container}>
 			<Text style={styles.title}>Accueil Docteur</Text>
-
-			<TouchableOpacity
-				style={styles.ButtonNav}
-				onPress={() => navigation.navigate('PatientsList')}
-			>
-				<Text style={styles.ButtonNavText}>📋 Voir tous les patients</Text>
-			</TouchableOpacity>
-
-			<TouchableOpacity
-				style={[styles.ButtonNav, { backgroundColor: '#17a2b8' }]}
-				onPress={() => setAddModalVisible(true)}
-			>
-				<Text style={styles.ButtonNavText}>➕ Ajouter un patient</Text>
-			</TouchableOpacity>
 
 			<TouchableOpacity
 				style={styles.ButtonNav}
@@ -205,11 +190,21 @@ Merci de votre attention.`;
 			>
 				<Text style={styles.ButtonNavText}>📅 Liste des rendez-vous</Text>
 			</TouchableOpacity>
+			<TextInput
+				style={styles.searchInput}
+				placeholder="🔍 Rechercher un patient..."
+				value={searchText}
+				onChangeText={setSearchText}
+			/>
 
 			<FlatList
-				data={patients}
+				data={patients.filter(patient =>
+					`${patient.nom} ${patient.prenom}`
+						.toLowerCase()
+						.includes(searchText.toLowerCase())
+				)}
 				renderItem={renderItem}
-				keyExtractor={item => item.id}
+				keyExtractor={item => item.id.toString()}
 				style={styles.list}
 			/>
 
@@ -263,64 +258,6 @@ Merci de votre attention.`;
 								<Text style={styles.buttonText}>💾 Enregistrer</Text>
 							</TouchableOpacity>
 						</View>
-					</View>
-				</View>
-			</Modal>
-
-			{/* Modal d'ajout */}
-			<Modal
-				animationType="slide"
-				transparent={true}
-				visible={addModalVisible}
-				onRequestClose={() => setAddModalVisible(false)}
-			>
-				<View style={styles.centeredView}>
-					<View style={styles.modalView}>
-						<View
-							style={{
-								flexDirection: 'row',
-								justifyContent: 'space-between',
-								width: '100%',
-							}}
-						>
-							<Text style={styles.modalTitle}>Nouveau patient</Text>
-							<TouchableOpacity onPress={() => setAddModalVisible(false)}>
-								<Ionicons name="close" size={24} color="black" />
-							</TouchableOpacity>
-						</View>
-
-						<TextInput
-							style={styles.input}
-							value={newName}
-							onChangeText={setNewName}
-							placeholder="Nom du patient"
-						/>
-						<TextInput
-							style={styles.input}
-							value={newAge}
-							onChangeText={setNewAge}
-							placeholder="Âge"
-							keyboardType="numeric"
-						/>
-						<TextInput
-							style={styles.input}
-							value={newMedicine}
-							onChangeText={setNewMedicine}
-							placeholder="Médicaments"
-						/>
-						<TextInput
-							style={styles.input}
-							value={newLastVisit}
-							onChangeText={setNewLastVisit}
-							placeholder="Dernière visite (JJ/MM/AAAA)"
-						/>
-
-						<TouchableOpacity
-							style={[styles.button, styles.buttonSave, { width: '100%', marginTop: 10 }]}
-							onPress={addPatient}
-						>
-							<Text style={styles.buttonText}>➕ Ajouter</Text>
-						</TouchableOpacity>
 					</View>
 				</View>
 			</Modal>
@@ -437,5 +374,15 @@ const styles = StyleSheet.create({
 		color: 'white',
 		fontWeight: 'bold',
 		textAlign: 'center',
+	},
+	searchInput: {
+		width: '100%',
+		height: 40,
+		borderWidth: 1,
+		borderColor: '#ccc',
+		borderRadius: 8,
+		paddingHorizontal: 10,
+		marginBottom: 10,
+		backgroundColor: 'white',
 	},
 });

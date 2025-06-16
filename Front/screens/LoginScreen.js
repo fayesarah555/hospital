@@ -14,7 +14,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration API
-const API_BASE_URL = 'http://192.168.1.193:3001/api/auth/login';
+const API_BASE_URL = 'http://10.74.0.54:3001/api/auth/login';
 
 export default function LoginScreen({ navigation }) {
 	const [email, setEmail] = useState('');
@@ -49,6 +49,9 @@ export default function LoginScreen({ navigation }) {
 			// Stocker le token et les infos utilisateur
 			await AsyncStorage.setItem('authToken', token);
 			await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+			await AsyncStorage.setItem('token', token);
+			console.log('Token stocké dans AsyncStorage:', token);
 
 			console.log('👤 Utilisateur connecté:', user);
 			console.log('🔑 Token stocké');

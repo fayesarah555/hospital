@@ -8,10 +8,18 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // GET /api/rendez-vous/medecin/:medecinId - Agenda d'un médecin
-router.get('/medecin/:medecinId', requireRole(['medecin', 'admin']), rendezvousController.getAgendaMedecin);
+router.get(
+	'/medecin/:medecinId',
+	requireRole(['medecin', 'admin']),
+	rendezvousController.getAgendaMedecin
+);
 
 // GET /api/rendez-vous/medecin/:medecinId/creneaux - Créneaux disponibles
-router.get('/medecin/:medecinId/creneaux', requireRole(['medecin', 'admin']), rendezvousController.getCreneauxDisponibles);
+router.get(
+	'/medecin/:medecinId/creneaux',
+	requireRole(['medecin', 'admin']),
+	rendezvousController.getCreneauxDisponibles
+);
 
 // GET /api/rendez-vous/patient/:patientId - Rendez-vous d'un patient
 router.get('/patient/:patientId', rendezvousController.getRendezVousPatient);

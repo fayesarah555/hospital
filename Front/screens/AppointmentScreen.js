@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as MailComposer from 'expo-mail-composer';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_BASE_URL = 'http://10.74.0.54:3001';
 
 export default function AppointmentScreen({ navigation }) {
 	const [patientName, setPatientName] = useState('');
@@ -19,6 +23,17 @@ export default function AppointmentScreen({ navigation }) {
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [showTimePicker, setShowTimePicker] = useState(false);
 	const [reason, setReason] = useState('');
+
+	const formatMySQLDate = date => {
+		const pad = n => (n < 10 ? '0' + n : n);
+		const year = date.getFullYear();
+		const month = pad(date.getMonth() + 1);
+		const day = pad(date.getDate());
+		const hours = pad(date.getHours());
+		const minutes = pad(date.getMinutes());
+		const seconds = '00';
+		return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+	};
 
 	const notifyByEmail = async () => {
 		const isAvailable = await MailComposer.isAvailableAsync();
@@ -62,15 +77,40 @@ Votre rendez-vous avec le Dr ${doctorName} est confirmé.
 			return;
 		}
 
-		await notifyByEmail();
+		const fullDate = new Date(date);
+		fullDate.setHours(time.getHours(), time.getMinutes(), 0);
 
-		Alert.alert(
-			'Rendez-vous confirmé',
-			`Patient: ${patientName}\nDocteur: ${doctorName}\nDate: ${date.toLocaleDateString()}\nHeure: ${time
-				.toLocaleTimeString()
-				.slice(0, 5)}\nMotif: ${reason}`,
-			[{ text: 'OK', onPress: () => navigation.goBack() }]
-		);
+		const formattedDate = formatMySQLDate(fullDate);
+
+		console.log('🟢 Payload:', {
+			patient_id: parseInt(patientName, 10),
+			medecin_id: parseInt(doctorName, 10),
+			date_heure: formattedDate,
+			notes: reason.trim(),
+		});
+
+		try {
+			const token = await AsyncStorage.getItem('authToken');
+			await axios.post(
+				`${API_BASE_URL}/api/rendez-vous`,
+				{
+					patient_id: parseInt(patientName, 10),
+					medecin_id: parseInt(doctorName, 10),
+					date_heure: formattedDate,
+					notes: reason.trim(),
+				},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			Alert.alert('Succès', 'Rendez-vous créé avec succès');
+			await notifyByEmail();
+			navigation.goBack();
+		} catch (error) {
+			console.error('❌ Erreur:', error.response?.data || error.message);
+			Alert.alert('Erreur', 'Impossible de créer le rendez-vous.');
+		}
 	};
 
 	return (
@@ -79,16 +119,18 @@ Votre rendez-vous avec le Dr ${doctorName} est confirmé.
 
 			<TextInput
 				style={styles.input}
-				placeholder="Nom du patient"
+				placeholder="ID du patient"
 				value={patientName}
 				onChangeText={setPatientName}
+				keyboardType="numeric"
 			/>
 
 			<TextInput
 				style={styles.input}
-				placeholder="Nom du médecin"
+				placeholder="ID du médecin"
 				value={doctorName}
 				onChangeText={setDoctorName}
+				keyboardType="numeric"
 			/>
 
 			<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>

@@ -11,7 +11,11 @@ router.use(authenticateToken);
 router.get('/', patientsController.getAllPatients);
 
 // GET /api/patients/medecin/:medecinId - Patients d'un médecin spécifique
-router.get('/medecin/:medecinId', requireRole(['medecin', 'admin']), patientsController.getPatientsByMedecin);
+router.get(
+	'/medecin/:medecinId',
+	requireRole(['medecin', 'admin']),
+	patientsController.getPatientsByMedecin
+);
 
 // GET /api/patients/:id - Détail d'un patient
 router.get('/:id', patientsController.getPatientById);
@@ -20,7 +24,11 @@ router.get('/:id', patientsController.getPatientById);
 router.post('/', requireRole(['rh', 'admin']), patientsController.createPatient);
 
 // PUT /api/patients/:id - Modifier un patient (RH et Admin)
-router.put('/:id', requireRole(['rh', 'admin']), patientsController.updatePatient);
+router.put(
+	'/:id',
+	requireRole(['rh', 'admin', 'medecin']),
+	patientsController.updatePatient
+);
 
 // DELETE /api/patients/:id - Supprimer un patient (Admin seulement)
 router.delete('/:id', requireRole(['admin']), patientsController.deletePatient);

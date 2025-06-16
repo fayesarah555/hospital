@@ -25,7 +25,7 @@ export default function RegisterScreen({ navigation }) {
 			return;
 		}
 		try {
-			await axios.post('http://192.168.1.193:3001/api/auth/register', {
+			await axios.post('http://10.74.0.54:3001/api/auth/register', {
 				nom: lastName,
 				prenom: firstName,
 				email: email,
